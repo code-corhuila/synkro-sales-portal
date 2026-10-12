@@ -1,0 +1,9 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+.filters > * { flex: 1 1 12rem; min-width: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); padding-top: var(--space-6); }

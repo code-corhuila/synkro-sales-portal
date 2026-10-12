@@ -1,0 +1,16 @@
+/* Right-aligned under the table, and wrapping on a narrow screen. */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3) var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.position {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
