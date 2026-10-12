@@ -12,4 +12,3 @@ services:
       HOST_ORIGIN: ${HOST_ORIGIN:-http://localhost:5173}
     ports:
       - "5176:80"
-
