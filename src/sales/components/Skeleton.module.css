@@ -16,23 +16,6 @@
   height: var(--space-4);
 }
 
-.badge {
-  width: 40%;
-  height: var(--space-6);
-  border-radius: var(--radius-full);
-}
-
-.figure {
-  width: 50%;
-  height: var(--space-8);
-}
-
-.chip {
-  width: calc(var(--space-16) * 2);
-  height: var(--space-8);
-  border-radius: var(--radius-full);
-}
-
 @keyframes shimmer {
   from {
     background-position: 200% 0;
