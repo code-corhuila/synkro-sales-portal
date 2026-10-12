@@ -20,7 +20,13 @@ export function SalesPage() {
   const title = useId()
   // Left in the history entry by the detail screen when Sales answered 403; read once, then cleared.
   const [notice, setNotice] = useState(peekSalesNotice)
-  useEffect(() => { clearSalesNotice() }, [])
+  useEffect(() => {
+    clearSalesNotice()
+    // The history stays mounted while a detail is shown, so a redirect back to it arrives as an event.
+    const onRedirect = () => { const next = peekSalesNotice(); if (next) { setNotice(next); clearSalesNotice() } }
+    window.addEventListener('popstate', onRedirect)
+    return () => window.removeEventListener('popstate', onRedirect)
+  }, [])
   const user = session.user()
   const filtered = Boolean(history.query.from || history.query.to || history.query.customerId)
   const clear = () => { setDraft({}); setErrors({}); history.applyFilters({}) }

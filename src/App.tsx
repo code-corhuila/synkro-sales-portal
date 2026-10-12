@@ -1,5 +1,7 @@
-import { useSyncExternalStore } from 'react'
-import { resolveScreen } from './routes'
+import { useState, useSyncExternalStore } from 'react'
+import { parseRoute } from './routes'
+import { SaleDetailPage } from './sales/pages/SaleDetailPage'
+import { SalesPage } from './sales/pages/SalesPage'
 
 // The host owns routing, guards and navigation; the remote never installs a competing browser
 // router. But /sales and /sales/{id} are one host route (`/sales/*`), so moving between them keeps
@@ -13,5 +15,15 @@ const subscribe = (notify: () => void) => {
 const currentPath = () => window.location.pathname
 
 export default function App() {
-  return resolveScreen(useSyncExternalStore(subscribe, currentPath))
+  const route = parseRoute(useSyncExternalStore(subscribe, currentPath))
+  const onHistory = route?.screen === 'history'
+  // Once opened, the history screen stays mounted (hidden) while a detail is shown, so going
+  // back keeps the person's form draft, filters and page instead of starting over.
+  const [opened, setOpened] = useState(onHistory)
+  if (onHistory && !opened) setOpened(true)
+  if (!route) return null
+  return <>
+    {(opened || onHistory) && <div hidden={!onHistory}><SalesPage /></div>}
+    {route.screen === 'detail' && <SaleDetailPage key={route.saleId} saleId={route.saleId} />}
+  </>
 }

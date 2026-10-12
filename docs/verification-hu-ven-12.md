@@ -88,3 +88,17 @@ Por tanto: no se ejecutó ninguna saga real, ni la composición de detalle con s
 ## Cobertura (run final, V8)
 
 Global: statements 97,93 % (665/679), branches 94,85 %, funciones 100 %, líneas 100 %. `src/sales/components` 95,32 % statements; `src/sales/model` 99,26 %; `src/sales/pages` 98,32 %; `src/` (navegación, rutas) 100 %. Ningún módulo de producción nuevo está excluido; solo pruebas, dobles, setup y declaraciones.
+
+## Revisión previa al PR (12 de octubre de 2026, sobre `8685cde`)
+
+**Defecto encontrado y corregido.** La revisión de navegación mostró que volver de `/sales/{id}` a `/sales` remontaba el historial y perdía el borrador del formulario y los filtros. Primero se añadieron 9 pruebas de regresión (`src/navigation.regression.test.tsx`; 3 fallaron), luego `App` pasó a mantener montado (oculto con `hidden`) el historial ya abierto mientras se ve un detalle, y `SalesPage` escucha `popstate` para mostrar el aviso del 403 aunque siga montada. `src/routes.tsx` expone ahora `parseRoute`. Todo dentro del portal Sales; el host no se modifica (no se demostró contradicción arquitectónica).
+
+Cubierto por las pruebas: `/sales` → detalle → `/sales` conserva el borrador y los filtros; Atrás/Adelante reales del navegador; el campo es el mismo nodo DOM y no hay consultas nuevas al volver; un `popstate` con la misma ruta no remonta ni consulta; `navigateTo`/enlace emiten un solo `popstate` y una sola entrada; los oyentes se retiran al desmontar; entre dos ventas no queda contenido de la anterior; otra ruta (otro portal) desmonta Sales y deja de consultar, y volver monta limpio; un 403 desde el detalle con el historial ya montado muestra el aviso. Entre portales el estado de Sales no se conserva (el host desmonta el remoto; es decisión del host).
+
+**Idempotencia (revisada, sin cambios).** Misma clave tras red/timeout/5xx/forma inesperada y al reordenar líneas; clave nueva solo si cambia la intención o tras `COMPENSATED`; saga conocida o sin resolver ⇒ se observa, no hay otro POST; segundo envío durante el vuelo ignorado de forma síncrona; sin reintentos automáticos. Un reintento no puede generar una segunda venta independiente salvo que el usuario cambie el formulario (intención nueva, decisión explícita).
+
+**Endpoints.** El único POST de producción es `/api/v1/sagas/register-sale` (guarda en `sourceContract.test.ts`); no hay `POST /api/v1/sales`. El detalle usa solo GET de Sales, Customers y Products por `shell/apiClient`, con el total y precios congelados de Sales.
+
+**Discrepancia de diseño (sin editar synkro-docs).** `wireframes.md` («Screen: Sale detail») pide, ante error, un mensaje de área completa porque «no hay estado parcial sensato». HU-VEN-12 permite mostrar parcialmente cuando falla solo Customers/Products. Se distinguen así: fallo de la **venta principal** (`GET /sales/{id}`: error, 401, red) ⇒ pantalla completa con «Reintentar» (o 404/403 propios), sin datos; fallo **auxiliar** (cliente o producto) ⇒ la venta se conserva completa, con identificadores almacenados, aviso contextual y «Reintentar información». Debe reconciliarse en la documentación por el equipo.
+
+**Naturaleza de la evidencia.** La verificación en navegador descrita arriba usó respuestas de `/api/v1/*` interceptadas en la página: valida la UI y su composición con el host, **no** la saga real. Workflow, Customers, Products, Sales y el gateway reales no se ejercieron; Customers sigue en 501. La integración real y la aceptación de extremo a extremo siguen pendientes y el PR debe permanecer en borrador.

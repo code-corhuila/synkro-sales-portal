@@ -33,7 +33,7 @@ it('/sales → detalle → /sales conserva el borrador del formulario y los filt
   await user.type(screen.getByLabelText('ID del cliente'), ids.customer)
   await user.click(screen.getByRole('link', { name: `Ver venta ${ids.sale}` }))
   expect(await screen.findByRole('heading', { name: 'Detalle de venta' })).toBeVisible()
-  expect(screen.queryByLabelText('Documento del cliente')).toBeNull()
+  expect(screen.getByLabelText('Documento del cliente').closest('[hidden]')).not.toBeNull()
   await user.click(screen.getByRole('link', { name: 'Volver al historial' }))
   expect(await screen.findByRole('heading', { name: 'Ventas' })).toBeVisible()
   expect(screen.getByLabelText('Documento del cliente')).toHaveValue('1075')
@@ -97,13 +97,13 @@ it('navigateTo y el enlace emiten un solo popstate y no duplican entradas', asyn
   expect(window.history.length).toBe(length + 1)
 })
 
-it('el remoto registra un solo oyente de popstate y lo retira al desmontar', () => {
+it('el remoto registra dos oyentes de popstate (ruta y aviso) y los retira y lo retira al desmontar', () => {
   const add = vi.spyOn(window, 'addEventListener')
   const remove = vi.spyOn(window, 'removeEventListener')
   const { unmount } = render(<App />)
-  expect(add.mock.calls.filter(([type]) => type === 'popstate')).toHaveLength(1)
+  expect(add.mock.calls.filter(([type]) => type === 'popstate')).toHaveLength(2)
   unmount()
-  expect(remove.mock.calls.filter(([type]) => type === 'popstate')).toHaveLength(1)
+  expect(remove.mock.calls.filter(([type]) => type === 'popstate')).toHaveLength(2)
   add.mockRestore()
   remove.mockRestore()
 })
