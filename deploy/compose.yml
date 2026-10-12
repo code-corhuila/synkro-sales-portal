@@ -7,8 +7,13 @@ services:
       context: ../
       dockerfile: deploy/Dockerfile
       args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/remotes/sales/}
         VITE_SHELL_ENTRY_URL: ${VITE_SHELL_ENTRY_URL:-http://localhost:5173/assets/remoteEntry.js}
     environment:
       HOST_ORIGIN: ${HOST_ORIGIN:-http://localhost:5173}
-    ports:
-      - "5176:80"
+    expose: ["80"]
+    networks: [platform]
+
+networks:
+  platform:
+    external: true
