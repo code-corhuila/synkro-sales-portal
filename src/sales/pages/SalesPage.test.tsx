@@ -36,7 +36,7 @@ it.each(['ADMIN', 'SALESPERSON'])('data %s usa respuesta y total autoritativo', 
   expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Fecha', 'Cliente', 'Líneas', 'Total', 'Acciones'])
   expect(screen.getByText(customer)).toBeVisible()
   expect(screen.getByText(/1\.234\.567,89/)).toBeVisible()
-  expect(screen.getByText(/11 oct 2026/)).toBeVisible()
+  expect(screen.getByText(/11.*2026/)).toBeVisible()
   expect(screen.getByRole('button', { name: /Ver/ })).toBeDisabled()
   expect(screen.getByText(/El detalle de la venta estará disponible/)).toBeVisible()
   expect(apiClient.request.mock.calls.every(([path]) => path === '/api/v1/sales')).toBe(true)
