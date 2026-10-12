@@ -9,7 +9,7 @@ RUN npm ci
 COPY . .
 
 # Where the host (synkro-front) serves the federation entry that exposes
-# shell/apiClient and shell/session. It is the only build input: the portal knows
+# shell/apiClient and shell/session. Together with its asset base, this is a build input: the portal knows
 # the host's entry and nothing else about where it runs.
 ARG VITE_BASE_PATH=/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
