@@ -1,0 +1,36 @@
+server {
+  listen 80;
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  gzip on;
+  gzip_types text/css application/javascript application/json image/svg+xml;
+
+  # The host imports the remote from another origin, so its assets say who may.
+  # add_header is not inherited into a location that has its own, so each block
+  # carries everything it needs.
+
+  # The remote entry decides which version of the portal the browser loads: never cached.
+  location = /assets/remoteEntry.js {
+    add_header Cache-Control "no-store" always;
+    add_header Access-Control-Allow-Origin "${HOST_ORIGIN}" always;
+    add_header Vary "Origin" always;
+  }
+
+  # Hashed file names: a new build is a new URL, so these are cached for good.
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    add_header Access-Control-Allow-Origin "${HOST_ORIGIN}" always;
+    add_header Vary "Origin" always;
+  }
+
+  location = /index.html {
+    add_header Cache-Control "no-cache" always;
+  }
+
+  location / {
+    try_files $uri =404;
+  }
+}
