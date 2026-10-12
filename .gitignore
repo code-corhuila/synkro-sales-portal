@@ -7,3 +7,8 @@ build/
 .idea/
 .DS_Store
 *.local
+
+.reference/
+coverage/
+.evidence/
+*.tsbuildinfo
