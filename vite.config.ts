@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     },
     preview: { port: 5176, strictPort: true },
     test: {
+      include: ['src/**/*.test.{ts,tsx}'],
       environment: 'jsdom',
       globals: true,
       setupFiles: './src/test-setup.ts',
@@ -34,7 +35,7 @@ export default defineConfig(({ mode }) => {
         exclude: ['src/**/*.test.{ts,tsx}', 'src/test-doubles/**', 'src/test-setup.ts', 'src/**/*.d.ts'],
         reporter: ['text', 'lcov'],
         // Frontend floor from the team's testing strategy: 70% of statements.
-        thresholds: { statements: 70 },
+        thresholds: { statements: 70, 'src/sales/**': { statements: 70 } },
       },
       alias: {
         'shell/apiClient': double('shellApiClient.ts'),

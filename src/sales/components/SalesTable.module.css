@@ -1,0 +1,78 @@
+/* The scroll container: the table keeps a readable width, and a narrow screen
+   scrolls the table inside this box, never the page. */
+.scroller {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.table {
+  width: 100%;
+  min-width: 48rem;
+  border-collapse: collapse;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-text-disabled);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.name {
+  overflow-wrap: anywhere;
+}
+
+.identifier { font-family: var(--font-family-mono); overflow-wrap: anywhere; }
+.hint { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+
+/* Prices and stock are numbers to scan and compare: mono, right-aligned, with
+   numerals of equal width so the digits line up. */
+.numeric {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th.numericHeader,
+.table td.numeric {
+  text-align: right;
+}
+
+/* The actions column is right-aligned like the numbers, but it holds buttons:
+   they wrap together instead of forcing a width. */
+.table th.endHeader,
+.table td.actionsCell {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.stock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* A placeholder in a numeric column hugs the right edge, where the number will be. */
+.table td.numeric > [aria-hidden='true'],
+.table td.actionsCell > [aria-hidden='true'] {
+  margin-left: auto;
+}
