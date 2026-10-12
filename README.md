@@ -42,7 +42,7 @@ docker run --rm -e HOST_ORIGIN=http://localhost:5173 synkro-sales-portal:local n
 docker compose --env-file .env -f deploy/compose.yml up --build
 ```
 
-Copiar `.env.example` a `.env` para configurar el entry del host (build) y su origen CORS (runtime). No se configura gateway ni credenciales. El build usa Node 22 + npm ci; compose publica 5176. Nginx envsubst solo sustituye HOST_ORIGIN. Entry con `Cache-Control: no-store`; chunks con hash y caché immutable. Compose cubre únicamente este portal.
+Copiar `.env.example` a `.env` para configurar el entry del host (build) y su origen CORS (runtime). No se configura gateway ni credenciales. El build usa Node 22 + npm ci; Compose expone 80 solo en platform y no publica puertos; el host sirve /remotes/sales/. Nginx envsubst solo sustituye HOST_ORIGIN. Entry con `Cache-Control: no-store`; chunks con hash y caché immutable. Compose cubre únicamente este portal.
 
 CI conserva los archivos comunes y verifica lint, build, cobertura, bundle, imagen y Nginx. Corre para PR dirigidos a develop/qa/main y push en esas ramas, sin trigger permanente para esta feature.
 
