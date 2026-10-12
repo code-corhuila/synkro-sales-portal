@@ -2,7 +2,7 @@ import { apiClient } from '../../test-doubles/shellApiClient'
 import { listSales } from './salesApi'
 
 const page = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } }
-beforeEach(() => apiClient.request.mockReset().mockResolvedValue(page))
+beforeEach(() => { apiClient.request.mockReset().mockResolvedValue(page) })
 
 it('usa solo el cliente compartido, ruta GET y paginación predeterminada', async () => {
   const direct = vi.spyOn(globalThis, 'fetch')
