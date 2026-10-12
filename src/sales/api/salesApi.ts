@@ -16,6 +16,6 @@ export async function listSales(filters: SalesQuery = {}, options: { signal?: Ab
   })
 }
 
-export function getSale(saleId: string, { signal }: { signal?: AbortSignal } = {}): Promise<Sale> {
+export async function getSale(saleId: string, { signal }: { signal?: AbortSignal } = {}): Promise<Sale> {
   return apiClient.request<Sale>(`/api/v1/sales/${pathId(saleId)}`, { signal })
 }
