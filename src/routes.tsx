@@ -1,7 +1,8 @@
 import { SalesPage } from './sales/pages/SalesPage'
 
-// Future detail navigation contract. No browser router or fake detail screen.
-export const saleDetailPath = (saleId: string) => `/sales/${encodeURIComponent(saleId)}`
+// Detail navigation contract: the helper lives with the other host-navigation functions.
+export { saleDetailPath } from './navigation'
+
 export function resolveScreen(path: string) {
   return /^\/sales\/?$/.test(path) ? <SalesPage /> : null
 }
