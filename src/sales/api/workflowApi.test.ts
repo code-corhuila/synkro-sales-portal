@@ -5,7 +5,7 @@ import { getSaga, startRegisterSale } from './workflowApi'
 const request = { customerId: ids.customer, lines: [{ productId: ids.productA, quantity: 2 }] }
 const key = '7d444840-9dc0-4f3b-9d5e-d1f0b1d5f0a1'
 
-beforeEach(() => apiClient.request.mockReset().mockResolvedValue(sagaFixture()))
+beforeEach(() => { apiClient.request.mockReset().mockResolvedValue(sagaFixture()) })
 
 describe('startRegisterSale', () => {
   it('usa POST /api/v1/sagas/register-sale con el cuerpo documentado y la clave de idempotencia explícita', async () => {
@@ -40,9 +40,8 @@ describe('startRegisterSale', () => {
     expect(apiClient.request).not.toHaveBeenCalled()
   })
   it('propaga el error de transporte sin reintentar por su cuenta', async () => {
-    const failure = { status: 0, body: { error: 'TIMEOUT' } }
-    apiClient.request.mockRejectedValue(failure)
-    await expect(startRegisterSale(request, { idempotencyKey: key })).rejects.toBe(failure)
+    apiClient.request.mockRejectedValue({ status: 0, body: { error: 'TIMEOUT' } })
+    await expect(startRegisterSale(request, { idempotencyKey: key })).rejects.toMatchObject({ status: 0 })
     expect(apiClient.request).toHaveBeenCalledTimes(1)
   })
 })

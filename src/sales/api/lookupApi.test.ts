@@ -3,7 +3,7 @@ import { customerFixture, ids, pageOf, productFixture } from '../../test-doubles
 import { findCustomersByDocument, getCustomer } from './customersApi'
 import { getProduct, searchProducts } from './productsApi'
 
-beforeEach(() => apiClient.request.mockReset())
+beforeEach(() => { apiClient.request.mockReset() })
 
 describe('customersApi', () => {
   it('busca por documento exacto con los únicos parámetros documentados', async () => {

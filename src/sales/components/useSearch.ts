@@ -12,8 +12,7 @@ export function useSearch<T>(run: (term: string, signal: AbortSignal) => Promise
   const [state, setState] = useState<SearchState<T>>({ status: 'idle' })
   const controller = useRef<AbortController | null>(null)
   const runner = useRef(run)
-  runner.current = run
-
+  useEffect(() => { runner.current = run })
   useEffect(() => () => controller.current?.abort(), [])
 
   const search = useCallback((term: string) => {

@@ -27,8 +27,7 @@ export function SaleForm({ pending, blockedReason, onSubmit, onClear, onDraftCha
   const [focusRequest, setFocusRequest] = useState(0)
   const form = useRef<HTMLFormElement>(null)
   const notify = useRef(onDraftChange)
-  notify.current = onDraftChange
-
+  useEffect(() => { notify.current = onDraftChange })
   useEffect(() => { notify.current?.(buildRegisterRequest(draft)) }, [draft])
   useEffect(() => {
     if (focusRequest) form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()

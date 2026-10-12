@@ -1,5 +1,6 @@
 import { apiClient } from '../../test-doubles/shellApiClient'
-import { listSales } from './salesApi'
+import { ids, saleFixture } from '../../test-doubles/fixtures'
+import { getSale, listSales } from './salesApi'
 
 const page = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } }
 beforeEach(() => { apiClient.request.mockReset().mockResolvedValue(page) })
@@ -38,4 +39,17 @@ it('preserva el error del host', async () => {
   const failure = { status: 403, body: { error: 'FORBIDDEN', traceId: 'reference' } }
   apiClient.request.mockRejectedValue(failure)
   await expect(listSales()).rejects.toBe(failure)
+})
+
+describe('getSale', () => {
+  it('lee GET /api/v1/sales/{id} con el cliente compartido y cancelación, sin escribir nada', async () => {
+    apiClient.request.mockResolvedValue(saleFixture())
+    const controller = new AbortController()
+    expect(await getSale(ids.sale, { signal: controller.signal })).toEqual(saleFixture())
+    expect(apiClient.request).toHaveBeenCalledExactlyOnceWith('/api/v1/sales/' + ids.sale, { signal: controller.signal })
+  })
+  it('rechaza un identificador que no es UUID antes de construir la ruta', async () => {
+    await expect(getSale('../reports/daily')).rejects.toThrow('Identificador inválido')
+    expect(apiClient.request).not.toHaveBeenCalled()
+  })
 })
