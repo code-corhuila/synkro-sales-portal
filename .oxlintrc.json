@@ -1,0 +1,13 @@
+{
+  "plugins": ["react", "typescript", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "no-restricted-globals": ["error",
+      { "name": "fetch", "message": "Use shell/apiClient." },
+      { "name": "XMLHttpRequest", "message": "Use shell/apiClient." },
+      { "name": "localStorage", "message": "The host owns credentials." },
+      { "name": "sessionStorage", "message": "The host owns credentials." }
+    ],
+    "no-restricted-imports": ["error", { "paths": [{ "name": "axios", "message": "Use shell/apiClient." }] }]
+  }
+}
