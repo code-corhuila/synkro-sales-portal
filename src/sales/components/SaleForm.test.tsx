@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { customerFixture, deferred, failure, ids, pageOf, productFixture } from '../../test-doubles/fixtures'
@@ -40,7 +40,7 @@ async function pickProduct(user: ReturnType<typeof userEvent.setup>, number: num
   const group = line(number)
   await user.type(within(group).getByLabelText('Buscar producto'), term)
   await user.click(within(group).getByRole('button', { name: 'Buscar producto' }))
-  await user.selectOptions(await within(group).findByLabelText('Producto'), option)
+  await user.selectOptions(await within(group).findByLabelText('Producto'), { 'Teclado mecánico': ids.productA, 'Ratón óptico': ids.productB }[option]!)
 }
 
 beforeEach(() => { apiClient.request.mockReset(); backend() })
@@ -106,7 +106,7 @@ it('busca productos por nombre acotado, calcula subtotal y total estimado con pr
   await user.type(within(line(1)).getByLabelText('Cantidad'), '2')
   expect(within(line(1)).getByText(/251,00/)).toBeVisible()
   expect(screen.getByText('Total estimado (referencial)')).toBeVisible()
-  expect(screen.getByTestId('estimated-total')).toHaveTextContent(/251,00/)
+  expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent(/251,00/)
   expect(screen.getByText(/No es el total de la venta/)).toBeVisible()
 })
 
@@ -115,7 +115,7 @@ it('no muestra total estimado hasta que todas las líneas son confiables', async
   await user.click(screen.getByRole('button', { name: 'Agregar línea' }))
   await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
   await user.type(within(line(1)).getByLabelText('Cantidad'), '1')
-  expect(screen.getByTestId('estimated-total')).toHaveTextContent('—')
+  expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent('—')
 })
 
 it('agrega y quita líneas, y bloquea agregar la línea 101', async () => {
@@ -124,11 +124,12 @@ it('agrega y quita líneas, y bloquea agregar la línea 101', async () => {
   expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(2)
   await user.click(screen.getByRole('button', { name: 'Quitar línea 2' }))
   expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(1)
-  for (let i = 0; i < 99; i += 1) await user.click(screen.getByRole('button', { name: 'Agregar línea' }))
-  expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(100)
-  expect(screen.getByRole('button', { name: 'Agregar línea' })).toBeDisabled()
+  const add = screen.getByRole('button', { name: 'Agregar línea' })
+  for (let i = 0; i < 99; i += 1) fireEvent.click(add)
+  expect(document.querySelectorAll('fieldset[aria-label^="Línea"]')).toHaveLength(100)
+  expect(add).toBeDisabled()
   expect(screen.getByText('Una venta admite hasta 100 líneas.')).toBeVisible()
-}, 60000)
+}, 30000)
 
 it('rechaza cantidades cero o negativas junto al campo', async () => {
   const { user, onSubmit } = setup()
