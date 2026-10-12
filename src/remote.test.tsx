@@ -28,3 +28,43 @@ describe('contrato del remoto', () => {
     expect(render(<App />).container).toBeEmptyDOMElement()
   })
 })
+
+describe('rutas de Sales', () => {
+  const saleId = '550e8400-e29b-41d4-a716-446655440003'
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
+  it.each([`/sales/${saleId}`, `/sales/${saleId}/`])('monta el detalle en %s', (path) => {
+    window.history.replaceState({}, '', path)
+    double.request.mockReturnValue(new Promise(() => {}))
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Detalle de venta' })).toBeVisible()
+    expect(double.request).toHaveBeenCalledWith(`/api/v1/sales/${saleId}`, expect.anything())
+  })
+  it.each(['/sales/a/b', '/sales/%E0%A4%A', '/salesx', '/sales//'])('no ocupa %s', (path) => {
+    window.history.replaceState({}, '', path)
+    double.request.mockReset()
+    expect(render(<App />).container).toBeEmptyDOMElement()
+  })
+  it('el historial y el detalle se alternan con Atrás/Adelante cuando el host vuelve a renderizar', () => {
+    double.request.mockReturnValue(new Promise(() => {}))
+    window.history.replaceState({}, '', '/sales')
+    const view = render(<App />)
+    expect(screen.getByRole('heading', { name: 'Ventas' })).toBeVisible()
+    window.history.pushState(null, '', `/sales/${saleId}`)
+    view.rerender(<App />)
+    expect(screen.getByRole('heading', { name: 'Detalle de venta' })).toBeVisible()
+    window.history.back()
+    return new Promise<void>((resolve) => window.addEventListener('popstate', () => {
+      view.rerender(<App />)
+      expect(screen.getByRole('heading', { name: 'Ventas' })).toBeVisible()
+      resolve()
+    }, { once: true }))
+  })
+  it('un id no UUID muestra «Venta no encontrada» sin consultar Sales', () => {
+    window.history.replaceState({}, '', '/sales/reports')
+    double.request.mockReset()
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Venta no encontrada' })).toBeVisible()
+    expect(double.request).not.toHaveBeenCalled()
+  })
+})
