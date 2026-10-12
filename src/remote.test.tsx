@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
+import { navigateTo } from './navigation'
 import { federationConfig, createFederationConfig } from './federation.config'
 import { apiClient } from 'shell/apiClient'
 import { session } from 'shell/session'
@@ -59,6 +60,15 @@ describe('rutas de Sales', () => {
       expect(screen.getByRole('heading', { name: 'Ventas' })).toBeVisible()
       resolve()
     }, { once: true }))
+  })
+  it('se actualiza por sí solo con popstate: el host no vuelve a renderizar al remoto entre /sales y /sales/{id}', () => {
+    double.request.mockReturnValue(new Promise(() => {}))
+    window.history.replaceState({}, '', '/sales')
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'Ventas' })).toBeVisible()
+    act(() => navigateTo(`/sales/${saleId}`))
+    expect(screen.getByRole('heading', { name: 'Detalle de venta' })).toBeVisible()
+    act(() => { window.history.back() })
   })
   it('un id no UUID muestra «Venta no encontrada» sin consultar Sales', () => {
     window.history.replaceState({}, '', '/sales/reports')
