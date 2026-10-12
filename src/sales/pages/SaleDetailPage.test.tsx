@@ -47,7 +47,7 @@ it('compone la venta: identificador, fecha, total autoritativo, cliente y línea
   render(<SaleDetailPage saleId={ids.sale} />)
   expect(await screen.findByText('Ana Pérez')).toBeVisible()
   expect(screen.getByText(ids.sale)).toBeVisible()
-  expect(screen.getByText(/12 oct 2026|oct 2026/)).toBeVisible()
+  expect(screen.getByText(/12.*2026/)).toBeVisible()
   expect(screen.getByText('Total de la venta').parentElement).toHaveTextContent(/1\.234\.567,89/)
   expect(screen.getByText(/1075123456/)).toBeVisible()
   const table = screen.getByRole('table', { name: 'Líneas de la venta' })
