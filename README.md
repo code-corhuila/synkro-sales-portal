@@ -42,7 +42,7 @@ docker run --rm -e HOST_ORIGIN=http://localhost:5173 synkro-sales-portal:local n
 docker compose --env-file .env -f deploy/compose.yml up --build
 ```
 
-Copiar `.env.example` a `.env` para configurar el entry del host (build) y su origen CORS (runtime). No se configura gateway ni credenciales. El build usa Node 22 + npm ci; compose publica 5176. Nginx envsubst solo sustituye HOST_ORIGIN. Entry con `Cache-Control: no-store`; chunks con hash y caché immutable. Compose cubre únicamente este portal.
+Copiar `.env.example` a `.env` para configurar el entry del host (build) y su origen CORS (runtime). No se configura gateway ni credenciales. El build usa Node 22 + npm ci; Compose expone 80 solo en platform y no publica puertos; el host sirve /remotes/sales/. Nginx envsubst solo sustituye HOST_ORIGIN. Entry con `Cache-Control: no-store`; chunks con hash y caché immutable. Compose cubre únicamente este portal.
 
 CI conserva los archivos comunes y verifica lint, build, cobertura, bundle, imagen y Nginx. Corre para PR dirigidos a develop/qa/main y push en esas ramas, sin trigger permanente para esta feature.
 
@@ -64,3 +64,11 @@ branch into another: `merge develop -> qa` and `merge qa -> main` do not exist i
 rule.
 
 Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
+
+## Internal root delivery
+
+The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 internally, and joins external `platform`; it publishes no host port. The host proxies `/remotes/sales/` to it. `VITE_BASE_PATH` reaches Vite through Compose and Docker; npm and direct Docker builds default to `/`, while Compose defaults to `/remotes/sales/`. Select `/` explicitly for a standalone container build. Preview remains available on 5176 for local npm use.
+
+`VITE_SHELL_ENTRY_URL` is the browser-accessible host federation entry (local default `http://localhost:5173/assets/remoteEntry.js`), and runtime `HOST_ORIGIN` is the browser host origin. Change both for another host; do not use Docker DNS in these inputs. Existing React/session/client, CORS, no-store entry caching, history/filter/cancellation behavior and production credential restrictions are preserved.
+
+Verify `python -m unittest discover -s tests`, existing npm lint/build/coverage/check:compiled and standalone/prefixed images. The root owning `tests/portal_delivery.py` checks both remotes, their compiled JavaScript and CSS through the real host. Related to code-corhuila/synkro-docs#239; full-platform acceptance, owner review and documentation remain pending.
