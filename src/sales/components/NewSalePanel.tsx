@@ -7,11 +7,12 @@ import styles from './NewSalePanel.module.css'
 
 // The "Nueva venta" section of /sales: the form, the saga outcome above it, and nothing else.
 // Sales are started only through Workflow; `onRegistered` lets the screen refresh the history.
-export function NewSalePanel({ onRegistered }: { onRegistered: (saleId: string) => void }) {
+export function NewSalePanel({ onRegistered, active = true }: { onRegistered: (saleId: string) => void; active?: boolean }) {
   const title = useId()
   const [formGeneration, setFormGeneration] = useState(0)
   const [latest, setLatest] = useState<RegisterSaleRequest | null>(null)
   const registration = useRegisterSale({
+    active,
     // A confirmed sale empties the form so the same lines cannot be sent twice by accident.
     onCompleted: (saleId) => { setFormGeneration((value) => value + 1); onRegistered(saleId) },
   })

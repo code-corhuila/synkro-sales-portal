@@ -17,7 +17,7 @@ const MAX_CONSECUTIVE_POLL_ERRORS = 3
 export type SaleLookup = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; sale: Sale } | { status: 'error' }
 type Lookup = { saleId: string; result: { status: 'ready'; sale: Sale } | { status: 'error' } }
 
-interface Options { onCompleted?: (saleId: string) => void }
+interface Options { onCompleted?: (saleId: string) => void; active?: boolean }
 
 function failureKind(error: unknown): { kind: SubmitFailureKind; traceId?: string } {
   const shared = error as { status?: number; body?: { traceId?: string } } | null
@@ -42,7 +42,7 @@ function wait(ms: number, signal: AbortSignal) {
 
 // Owns one registration at a time: the idempotency intent, the saga state machine and the
 // bounded observation. It starts a sale only from an explicit submit and never retries a POST by itself.
-export function useRegisterSale({ onCompleted }: Options = {}) {
+export function useRegisterSale({ onCompleted, active = true }: Options = {}) {
   const [recovery] = useState(() => {
     const owner = recoveryOwner()
     try { return { owner, intent: readIntent(owner), error: false } }
@@ -75,6 +75,15 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
   useEffect(() => { completed.current = onCompleted })
 
   useEffect(() => () => { observer.current?.abort(); saleLookup.current?.abort() }, [])
+
+  useEffect(() => {
+    if (active) return
+    observer.current?.abort()
+    saleLookup.current?.abort()
+    const current = stateRef.current
+    if (current.phase === 'running') dispatch({ type: 'unresolved', sagaId: current.sagaId, reason: 'status-unavailable' })
+    if (current.phase === 'submitting') dispatch({ type: 'submit-error', kind: 'uncertain' })
+  }, [active, dispatch])
 
   useEffect(() => session.subscribe?.(() => {
     if (sameSession()) return
@@ -145,8 +154,8 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
   const phase = state.phase
   const runningId = state.phase === 'running' ? state.sagaId : undefined
   useEffect(() => {
-    if (phase === 'running' && runningId) observe(runningId)
-  }, [phase, runningId, observe])
+    if (active && phase === 'running' && runningId) observe(runningId)
+  }, [active, phase, runningId, observe])
 
   const completedSaleId = state.phase === 'completed' ? state.saga.saleId : undefined
   useEffect(() => {
@@ -164,7 +173,7 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
 
   const submit = useCallback((request: RegisterSaleRequest) => {
     const current = stateRef.current
-    if (isPending(current) || !sameSession() || storageError) return
+    if (!active || isPending(current) || !sameSession() || storageError) return
     const fingerprint = intentFingerprint(request)
     // A saga that is already known is observed, never started again.
     if (current.phase === 'unresolved') { dispatch({ type: 'resume', sagaId: current.sagaId }); return }
@@ -193,7 +202,7 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
         dispatch({ type: 'submit-error', ...failure })
       },
     )
-  }, [accept, dispatch, recovery.owner, sameSession, storageError])
+  }, [accept, active, dispatch, recovery.owner, sameSession, storageError])
 
   const resume = useCallback(() => {
     const current = stateRef.current

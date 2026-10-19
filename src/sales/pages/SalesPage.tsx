@@ -13,7 +13,7 @@ import { clearSalesNotice, peekSalesNotice } from '../../navigation'
 import { useSalesHistory } from './useSalesHistory'
 import styles from './SalesPage.module.css'
 
-export function SalesPage() {
+export function SalesPage({ active = true }: { active?: boolean } = {}) {
   const history = useSalesHistory()
   const [draft, setDraft] = useState<SalesFilters>({})
   const [errors, setErrors] = useState<FilterErrors>({})
@@ -39,7 +39,7 @@ export function SalesPage() {
       <p className={styles.noticeText}>No tienes permiso para ver esa venta. Solo puedes consultar las ventas que registraste tú.</p>
       <Button variant="ghost" size="small" onClick={() => setNotice(null)}>Cerrar aviso</Button>
     </div>}
-    <NewSalePanel onRegistered={history.refresh} />
+    <NewSalePanel onRegistered={history.refresh} active={active} />
     <section aria-labelledby={title} className={styles.history}>
       <h2 id={title} className={styles.historyTitle}>Historial</h2>
       <SalesFilterBar filters={draft} errors={errors} onChange={setDraft} onErrors={setErrors} onApply={history.applyFilters} onClear={clear} />
