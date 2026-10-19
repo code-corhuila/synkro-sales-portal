@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { apiClient } from '../../test-doubles/shellApiClient'
-import { session } from '../../test-doubles/shellSession'
+import { notifySession, session } from '../../test-doubles/shellSession'
 import { deferred, failure, ids, sagaFixture } from '../../test-doubles/fixtures'
 import { useRegisterSale } from './useRegisterSale'
 
@@ -10,6 +10,7 @@ const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0) })
 beforeEach(() => {
   vi.useFakeTimers()
   sessionStorage.clear()
+  session.sessionId.mockReturnValue('test-session')
   session.user.mockReturnValue({ sub: ids.user, role: 'SALESPERSON' })
   apiClient.request.mockReset().mockRejectedValue(failure(0))
 })
@@ -93,4 +94,38 @@ it('una intención expirada no se convierte silenciosamente en una venta nueva',
   await flush()
   expect(posts()).toHaveLength(1)
   expect(second.result.current.blockedReason).toMatch(/venció/)
+})
+
+it('la misma persona en una sesión nueva no recupera la intención anterior', async () => {
+  const first = renderHook(() => useRegisterSale())
+  act(() => first.result.current.submit(request))
+  await flush()
+  first.unmount()
+  session.sessionId.mockReturnValue('new-session')
+  const second = renderHook(() => useRegisterSale())
+  expect(second.result.current.state.phase).toBe('idle')
+  expect(sessionStorage.length).toBe(0)
+})
+
+it('logout notificado limpia referencias y cancela observación, sin cancelar la saga del backend', async () => {
+  apiClient.request.mockResolvedValue(sagaFixture())
+  const { result } = renderHook(() => useRegisterSale())
+  act(() => result.current.submit(request))
+  await flush()
+  session.user.mockReturnValue(null)
+  session.sessionId.mockReturnValue(null)
+  act(() => notifySession())
+  expect(result.current.state.phase).toBe('idle')
+  expect(sessionStorage.length).toBe(0)
+  await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+  expect(apiClient.request).toHaveBeenCalledTimes(1)
+})
+
+it('sin contrato de sesión no inicia un registro imposible de aislar de forma segura', async () => {
+  session.sessionId.mockReturnValue(null)
+  const { result } = renderHook(() => useRegisterSale())
+  act(() => result.current.submit(request))
+  await flush()
+  expect(posts()).toHaveLength(0)
+  expect(result.current.blockedReason).toMatch(/Host/)
 })
