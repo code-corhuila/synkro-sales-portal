@@ -31,3 +31,9 @@ it('solo hay un cliente HTTP y ninguna dependencia nueva de transporte o router'
   expect(Object.keys(manifest.dependencies).sort()).toEqual(['react', 'react-dom'])
   expect(source(/react-router|BrowserRouter|XMLHttpRequest|axios/)).toEqual([])
 })
+
+it('el aviso de propiedad tiene una sola definición de estilos', () => {
+  const css = readFileSync(resolve('src/sales/pages/SalesPage.module.css'), 'utf8')
+  expect(css.match(/\.notice\s*\{/g)).toHaveLength(1)
+  expect(css.match(/\.noticeText\s*\{/g)).toHaveLength(1)
+})

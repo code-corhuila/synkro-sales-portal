@@ -25,7 +25,7 @@ it('loading conserva encabezado y filtros, anuncia y muestra filas skeleton sin 
   render(<SalesPage />)
   expect(screen.getByRole('heading', { name: 'Ventas' })).toBeVisible()
   expect(screen.getByLabelText('Desde')).toBeVisible()
-  expect(screen.getByText('Cargando ventas…')).toBeVisible()
+  expect(screen.getAllByRole('status').find((element) => element.textContent === 'Cargando ventas…')).toBeVisible()
   expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true')
   expect(screen.queryByText(customer)).toBeNull()
 })
