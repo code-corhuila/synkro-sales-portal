@@ -28,7 +28,7 @@ export function findViolations(files) {
   return files.flatMap(({ name, text }) => {
     // Narrow exception for noncredential recovery. Arbitrary keys, aliases,
     // bracket access, clear(), localStorage and credential markers still fail.
-    const journal = /\bconst STORAGE_KEY\s*=\s*['"]synkro\.sales\.intent\.v1['"];/.test(text)
+    const journal = /\b(?:const|var) STORAGE_KEY\s*=\s*['"]synkro\.sales\.intent\.v1['"];/.test(text)
       ? text.replace(/\bsessionStorage(?=\.(?:getItem|setItem|removeItem)\(STORAGE_KEY\s*[,)])/g, 'intentStorage')
       : text
     return RULES.filter(({ rule, patterns }) => patterns.some((pattern) => pattern.test(rule === 'token-handling' ? journal : text)))

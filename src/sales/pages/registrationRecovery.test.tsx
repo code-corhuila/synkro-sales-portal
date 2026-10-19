@@ -128,5 +128,5 @@ it('sin contrato de sesión no inicia un registro imposible de aislar de forma s
   act(() => result.current.submit(request))
   await flush()
   expect(posts()).toHaveLength(0)
-  expect(result.current.blockedReason).toMatch(/Host/)
+  expect(result.current.blockedReason).toMatch(/versión de SynkroTech/)
 })

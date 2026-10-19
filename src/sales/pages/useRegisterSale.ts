@@ -220,7 +220,7 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
   const sale: SaleLookup = !completedSaleId ? { status: 'idle' } : lookup?.saleId === completedSaleId ? lookup.result : { status: 'loading' }
 
   const blockedReason = !recovery.owner || sessionChanged
-    ? 'El Host debe ofrecer el contrato de sesión para registrar ventas de forma segura.'
+    ? 'No se puede registrar la venta con esta versión de SynkroTech. Contacta a un administrador.'
     : storageError ? 'No se pudo guardar la recuperación de la venta. Revisa el almacenamiento antes de continuar.'
     : expired
       ? 'El plazo de reintento venció. Un responsable debe conciliar esta venta antes de iniciar otra.'
