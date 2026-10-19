@@ -81,8 +81,8 @@ it('COMPENSATED sin paso informado no inventa uno', () => {
   expect(screen.getByRole('alert')).not.toHaveTextContent('Paso fallido')
 })
 
-it('FAILED es una falla operativa: pide atención, conserva el código y no afirma que el stock se restauró', async () => {
-  const { user, onDismiss } = setup({ phase: 'failed', saga: saga({ status: 'FAILED', failedStep: 'register-sale' }) })
+it('FAILED es una falla operativa: pide atención y no permite descartar su seguimiento', () => {
+  setup({ phase: 'failed', saga: saga({ status: 'FAILED', failedStep: 'register-sale' }) })
   const alert = screen.getByRole('alert')
   expect(alert).toHaveTextContent('La venta requiere atención')
   expect(alert).toHaveTextContent(ids.saga)
@@ -90,8 +90,7 @@ it('FAILED es una falla operativa: pide atención, conserva el código y no afir
   expect(alert).not.toHaveTextContent(/stock (fue|se) (liberad|restaur|repuest)/i)
   expect(alert).not.toHaveTextContent(/puedes (volver|intentar)/i)
   expect(alert).not.toHaveTextContent('register-sale')
-  await user.click(screen.getByRole('button', { name: 'Entendido' }))
-  expect(onDismiss).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('button', { name: 'Entendido' })).toBeNull()
 })
 
 it.each([

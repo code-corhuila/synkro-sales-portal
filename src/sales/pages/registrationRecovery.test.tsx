@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-globals -- Tests inspect only the portal's noncredential journal. */
 import { act, renderHook } from '@testing-library/react'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { notifySession, session } from '../../test-doubles/shellSession'

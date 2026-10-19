@@ -1,6 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
+import { session } from '../../test-doubles/shellSession'
 import { customerFixture, failure, ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
 import { NewSalePanel } from './NewSalePanel'
 
@@ -15,6 +16,7 @@ const posts = () => apiClient.request.mock.calls.filter(([path, options]) => pat
 const completed = sagaFixture({ status: 'COMPLETED', completedSteps: ['validate-customer', 'reserve-stock', 'register-sale'], saleId: ids.sale })
 
 beforeEach(() => {
+  session.user.mockReturnValue({ sub: ids.user, role: 'SALESPERSON' })
   postReplies = [completed]
   getReplies = [completed]
   let counter = 0
@@ -125,8 +127,8 @@ it('FAILED: alerta de atención con el código de la saga; reenviar la misma ven
   expect(alert).toHaveTextContent(ids.saga)
   expect(screen.getByRole('button', { name: 'Registrar venta' })).toBeDisabled()
   expect(screen.getByText(/requiere atención. No la reenvíes/)).toBeVisible()
-  await user.click(screen.getByRole('button', { name: 'Entendido' }))
-  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Entendido' })).toBeNull()
+  expect(screen.getByRole('alert')).toHaveTextContent(ids.saga)
 })
 
 it('«Limpiar» vacía el formulario y descarta un resultado ya cerrado', async () => {

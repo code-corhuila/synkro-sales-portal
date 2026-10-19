@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { apiClient } from '../../test-doubles/shellApiClient'
+import { session } from '../../test-doubles/shellSession'
 import { deferred, failure, ids, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
 import { useRegisterSale } from './useRegisterSale'
 
@@ -25,6 +26,7 @@ function next(queue: Reply[], fallback: unknown) {
 }
 
 beforeEach(() => {
+  session.user.mockReturnValue({ sub: ids.user, role: 'SALESPERSON' })
   vi.useFakeTimers()
   let counter = 0
   vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`)
@@ -74,7 +76,7 @@ describe('envío e idempotencia', () => {
     expect(posts()).toHaveLength(1)
     expect(result.current.state.phase).toBe('submit-failed')
   })
-  it('cambiar cliente, producto o cantidad es una intención nueva con clave nueva', async () => {
+  it('cambiar una intención incierta requiere conciliar la anterior antes de crear otra', async () => {
     postReplies = [failure(0, 'NETWORK_ERROR')]
     const { result } = setup()
     act(() => result.current.submit(request))
@@ -82,7 +84,7 @@ describe('envío e idempotencia', () => {
     act(() => result.current.submit(changed))
     await flush()
     expect(posts().map(([, options]) => options?.idempotencyKey)).toEqual([
-      '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002',
+      '00000000-0000-4000-8000-000000000001',
     ])
   })
   it('reordenar las mismas líneas conserva la clave', async () => {
@@ -198,7 +200,7 @@ describe('seguimiento de la saga', () => {
     await flush()
     expect(posts()).toHaveLength(1)
     act(() => result.current.trackDraft(changed))
-    expect(result.current.blockedReason).toBeUndefined()
+    expect(result.current.blockedReason).toMatch(/requiere atención/)
   })
   it('el tiempo máximo deja la saga sin resolver (no fallida ni completada) y no inicia otra', async () => {
     const { result, onCompleted } = setup()
