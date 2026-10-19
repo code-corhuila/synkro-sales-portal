@@ -23,7 +23,7 @@ export default function App() {
   if (onHistory && !opened) setOpened(true)
   if (!route) return null
   return <>
-    {(opened || onHistory) && <div hidden={!onHistory}><SalesPage /></div>}
+    {(opened || onHistory) && <div hidden={!onHistory}><SalesPage active={onHistory} /></div>}
     {route.screen === 'detail' && <SaleDetailPage key={route.saleId} saleId={route.saleId} />}
   </>
 }
