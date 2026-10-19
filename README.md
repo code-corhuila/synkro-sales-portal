@@ -85,6 +85,11 @@ Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
 
 ## Internal root delivery
 
+HU-VEN-12 current status: [verification and integration gates](docs/verification-hu-ven-12.md).
+Intent recovery requires the [proposed Host session lifecycle contract](docs/session-recovery-proposal.md).
+Without it, new registration is disabled; history and composed detail remain available.
+This contract is not implemented or approved in synkro-front by this change.
+
 The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 internally, and joins external `platform`; it publishes no host port. The host proxies `/remotes/sales/` to it. `VITE_BASE_PATH` reaches Vite through Compose and Docker; npm and direct Docker builds default to `/`, while Compose defaults to `/remotes/sales/`. Select `/` explicitly for a standalone container build. Preview remains available on 5176 for local npm use.
 
 `VITE_SHELL_ENTRY_URL` is the browser-accessible host federation entry (local default `http://localhost:5173/assets/remoteEntry.js`), and runtime `HOST_ORIGIN` is the browser host origin. Change both for another host; do not use Docker DNS in these inputs. Existing React/session/client, CORS, no-store entry caching, history/filter/cancellation behavior and production credential restrictions are preserved.
