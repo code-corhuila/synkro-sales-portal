@@ -86,9 +86,10 @@ Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
 ## Internal root delivery
 
 HU-VEN-12 current status: [verification and integration gates](docs/verification-hu-ven-12.md).
-Intent recovery requires the [proposed Host session lifecycle contract](docs/session-recovery-proposal.md).
-Without it, new registration is disabled; history and composed detail remain available.
-This contract is not implemented or approved in synkro-front by this change.
+Intent recovery uses the [Host session lifecycle contract](docs/session-recovery-proposal.md)
+verified in Front candidate `49eb6d1` (not integrated/tagged). On older Hosts
+without it, new registration is disabled; history and composed detail remain available.
+This portal change does not modify Front or ratify a pending architectural decision.
 
 The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 internally, and joins external `platform`; it publishes no host port. The host proxies `/remotes/sales/` to it. `VITE_BASE_PATH` reaches Vite through Compose and Docker; npm and direct Docker builds default to `/`, while Compose defaults to `/remotes/sales/`. Select `/` explicitly for a standalone container build. Preview remains available on 5176 for local npm use.
 
