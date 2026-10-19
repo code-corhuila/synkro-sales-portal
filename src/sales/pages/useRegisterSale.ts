@@ -5,6 +5,8 @@ import type { Saga } from '../model/saga'
 import { initialRegistration, isPending, registrationReducer, type RegistrationEvent, type RegistrationState, type SubmitFailureKind } from '../model/sagaMachine'
 import { intentFingerprint, type RegisterSaleRequest } from '../model/saleForm'
 import type { Sale } from '../model/sale'
+import { session } from 'shell/session'
+import { INTENT_TTL_MS, readIntent, recoveryOwner, removeIntent, writeIntent, type Intent } from '../model/intentJournal'
 
 // Bounded observation: growing waits, then a fixed one, and a hard ceiling. Past the
 // ceiling the saga is "unresolved" (it may still finish), never failed or completed.
@@ -16,7 +18,6 @@ export type SaleLookup = { status: 'idle' } | { status: 'loading' } | { status: 
 type Lookup = { saleId: string; result: { status: 'ready'; sale: Sale } | { status: 'error' } }
 
 interface Options { onCompleted?: (saleId: string) => void }
-interface Intent { fingerprint: string; key: string; sagaId?: string }
 
 function failureKind(error: unknown): { kind: SubmitFailureKind; traceId?: string } {
   const shared = error as { status?: number; body?: { traceId?: string } } | null
@@ -42,10 +43,22 @@ function wait(ms: number, signal: AbortSignal) {
 // Owns one registration at a time: the idempotency intent, the saga state machine and the
 // bounded observation. It starts a sale only from an explicit submit and never retries a POST by itself.
 export function useRegisterSale({ onCompleted }: Options = {}) {
-  const [state, setState] = useState<RegistrationState>(initialRegistration)
+  const [recovery] = useState(() => {
+    const owner = recoveryOwner()
+    try { return { owner, intent: readIntent(owner), error: false } }
+    catch { return { owner, intent: null, error: true } }
+  })
+  const restored: RegistrationState = recovery.intent?.sagaId
+    ? { phase: 'unresolved', sagaId: recovery.intent.sagaId, reason: 'status-unavailable' }
+    : recovery.intent ? { phase: 'submit-failed', kind: 'uncertain' } : initialRegistration
+  const [state, setState] = useState<RegistrationState>(restored)
+  const [storageError, setStorageError] = useState(recovery.error)
+  const [expired, setExpired] = useState(() => Boolean(recovery.intent && recovery.intent.expiresAt <= Date.now() && !recovery.intent.sagaId))
+  const [sessionChanged, setSessionChanged] = useState(false)
+  const sameSession = useCallback(() => Boolean(recovery.owner && recoveryOwner() === recovery.owner), [recovery.owner])
   // The reducer is pure: the ref holds the latest state synchronously, so two calls made before a
   // render (a double click) both see the first one's effect and cannot start two requests.
-  const stateRef = useRef<RegistrationState>(initialRegistration)
+  const stateRef = useRef<RegistrationState>(restored)
   const dispatch = useCallback((event: RegistrationEvent) => {
     const next = registrationReducer(stateRef.current, event)
     if (next === stateRef.current) return
@@ -54,8 +67,8 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
   }, [])
   const [lookup, setLookup] = useState<Lookup | null>(null)
   const [draft, setDraft] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState<string | null>(null)
-  const intent = useRef<Intent | null>(null)
+  const [submitted, setSubmitted] = useState<string | null>(recovery.intent?.fingerprint ?? null)
+  const intent = useRef<Intent | null>(recovery.intent)
   const observer = useRef<AbortController | null>(null)
   const saleLookup = useRef<AbortController | null>(null)
   const completed = useRef(onCompleted)
@@ -63,10 +76,30 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
 
   useEffect(() => () => { observer.current?.abort(); saleLookup.current?.abort() }, [])
 
+  useEffect(() => session.subscribe?.(() => {
+    if (sameSession()) return
+    observer.current?.abort()
+    saleLookup.current?.abort()
+    intent.current = null
+    try { removeIntent() } catch { setStorageError(true) }
+    setSessionChanged(true)
+    setLookup(null)
+    setSubmitted(null)
+    dispatch({ type: 'reset' })
+  }), [dispatch, sameSession])
+
   const accept = useCallback((saga: Saga) => {
-    if (intent.current) intent.current.sagaId = saga.sagaId
+    if (!sameSession()) return
+    if (intent.current) {
+      intent.current.sagaId = saga.sagaId
+      try { writeIntent(recovery.owner!, intent.current) } catch { setStorageError(true) }
+    }
     dispatch({ type: 'saga', saga })
-  }, [dispatch])
+    if (saga.status === 'COMPLETED' && saga.saleId || saga.status === 'COMPENSATED') {
+      try { removeIntent() } catch { setStorageError(true) }
+      intent.current = null
+    }
+  }, [dispatch, recovery.owner, sameSession])
 
   const observe = useCallback((sagaId: string) => {
     observer.current?.abort()
@@ -87,12 +120,12 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
           }
           try {
             const saga = await getSaga(sagaId, { signal })
-            if (signal.aborted) return
+            if (signal.aborted || !sameSession()) return
             errors = 0
             accept(saga)
             if (saga.status !== 'RUNNING') return
           } catch (error) {
-            if (signal.aborted) return
+            if (signal.aborted || !sameSession()) return
             errors += 1
             const status = (error as { status?: number } | null)?.status
             if (errors >= MAX_CONSECUTIVE_POLL_ERRORS || status === 401 || status === 403 || status === 404) {
@@ -105,7 +138,7 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
         // Aborted while waiting: unmounted or superseded.
       }
     })()
-  }, [accept, dispatch])
+  }, [accept, dispatch, sameSession])
 
   // Reacts to the state machine rather than to each call site, so every route to
   // "running" or "completed" (POST answer, replay, polling, resume) behaves the same.
@@ -117,7 +150,7 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
 
   const completedSaleId = state.phase === 'completed' ? state.saga.saleId : undefined
   useEffect(() => {
-    if (!completedSaleId) return
+    if (!completedSaleId || !sameSession()) return
     intent.current = null
     completed.current?.(completedSaleId)
     saleLookup.current?.abort()
@@ -127,17 +160,21 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
       (value) => { if (!controller.signal.aborted) setLookup({ saleId: completedSaleId, result: { status: 'ready', sale: value } }) },
       () => { if (!controller.signal.aborted) setLookup({ saleId: completedSaleId, result: { status: 'error' } }) },
     )
-  }, [completedSaleId])
+  }, [completedSaleId, sameSession])
 
   const submit = useCallback((request: RegisterSaleRequest) => {
     const current = stateRef.current
-    if (isPending(current)) return
+    if (isPending(current) || !sameSession() || storageError) return
     const fingerprint = intentFingerprint(request)
     // A saga that is already known is observed, never started again.
     if (current.phase === 'unresolved') { dispatch({ type: 'resume', sagaId: current.sagaId }); return }
+    if (intent.current && intent.current.expiresAt <= Date.now()) { setExpired(true); return }
+    if (intent.current && intent.current.fingerprint !== fingerprint) return
     if (current.phase === 'failed' && intent.current?.fingerprint === fingerprint) return
     if (current.phase === 'compensated') intent.current = null // that attempt is over; the next one is a new intent
-    if (intent.current?.fingerprint !== fingerprint) intent.current = { fingerprint, key: crypto.randomUUID() }
+    if (intent.current?.fingerprint !== fingerprint) intent.current = { fingerprint, key: crypto.randomUUID(), expiresAt: Date.now() + INTENT_TTL_MS }
+    try { writeIntent(recovery.owner!, intent.current) }
+    catch { setStorageError(true); return }
     setSubmitted(fingerprint)
     const { key } = intent.current
     dispatch({ type: 'submit' })
@@ -145,17 +182,26 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
     const controller = new AbortController()
     observer.current = controller
     startRegisterSale(request, { idempotencyKey: key, signal: controller.signal }).then(
-      (saga) => { if (!controller.signal.aborted) accept(saga) },
-      (error: unknown) => { if (!controller.signal.aborted) dispatch({ type: 'submit-error', ...failureKind(error) }) },
+      (saga) => { if (!controller.signal.aborted && sameSession()) accept(saga) },
+      (error: unknown) => {
+        if (controller.signal.aborted || !sameSession()) return
+        const failure = failureKind(error)
+        if (failure.kind !== 'uncertain') {
+          try { removeIntent() } catch { setStorageError(true) }
+          intent.current = null
+        }
+        dispatch({ type: 'submit-error', ...failure })
+      },
     )
-  }, [accept, dispatch])
+  }, [accept, dispatch, recovery.owner, sameSession, storageError])
 
   const resume = useCallback(() => {
     const current = stateRef.current
-    if (current.phase === 'unresolved') dispatch({ type: 'resume', sagaId: current.sagaId })
-  }, [dispatch])
+    if (sameSession() && current.phase === 'unresolved') dispatch({ type: 'resume', sagaId: current.sagaId })
+  }, [dispatch, sameSession])
 
   const reset = useCallback(() => {
+    if (intent.current) return
     observer.current?.abort()
     saleLookup.current?.abort()
     intent.current = null
@@ -173,10 +219,17 @@ export function useRegisterSale({ onCompleted }: Options = {}) {
   // Derived, not stored: the authoritative sale is looked up once per confirmed saleId.
   const sale: SaleLookup = !completedSaleId ? { status: 'idle' } : lookup?.saleId === completedSaleId ? lookup.result : { status: 'loading' }
 
-  const blockedReason = state.phase === 'unresolved'
+  const blockedReason = !recovery.owner || sessionChanged
+    ? 'El Host debe ofrecer el contrato de sesión para registrar ventas de forma segura.'
+    : storageError ? 'No se pudo guardar la recuperación de la venta. Revisa el almacenamiento antes de continuar.'
+    : expired
+      ? 'El plazo de reintento venció. Un responsable debe conciliar esta venta antes de iniciar otra.'
+    : state.phase === 'submit-failed' && state.kind === 'uncertain' && draft !== submitted
+      ? 'Hay un envío sin confirmar. Reconstruye el mismo cliente, productos y cantidades para reintentarlo con su clave original.'
+    : state.phase === 'unresolved'
     ? 'Hay una venta en seguimiento. Consulta su estado antes de registrar otra.'
-    : state.phase === 'failed' && draft !== null && draft === submitted
-      ? 'Esta venta requiere atención. No la reenvíes sin revisar el caso; cambia el formulario solo si es una venta distinta.'
+    : state.phase === 'failed'
+      ? 'Esta venta requiere atención. No la reenvíes sin revisar el caso con un responsable.'
       : undefined
 
   return {

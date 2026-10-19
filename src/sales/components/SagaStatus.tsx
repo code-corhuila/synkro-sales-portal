@@ -64,7 +64,6 @@ export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss
       <p className={styles.detail}>No se pudo confirmar la reversión de la operación. No reenvíes esta venta como nueva: un responsable debe revisar el caso.</p>
       {state.saga.failedStep && <p className={styles.detail}>Paso con falla: {STEP_LABELS[state.saga.failedStep]}</p>}
       <p className={styles.detail}>Código de seguimiento: <span className={styles.mono}>{state.saga.sagaId}</span></p>
-      <div className={styles.actions}><Button variant="secondary" size="small" onClick={onDismiss}>Entendido</Button></div>
     </div>}
     {state.phase === 'unresolved' && <div role="alert" className={styles.alert}>
       <p className={styles.message}>Venta sin resolver</p>
@@ -75,7 +74,7 @@ export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss
     {state.phase === 'submit-failed' && <div role="alert" className={styles.alert}>
       {state.kind === 'uncertain' && <>
         <p className={styles.message}>No se pudo confirmar si la venta fue recibida.</p>
-        <p className={styles.detail}>Puedes reintentar: se enviará la misma solicitud sin duplicar la venta.</p>
+        <p className={styles.detail}>Revisa el mismo cliente, productos y cantidades antes de reintentar. Se conservará la clave de la solicitud original.</p>
       </>}
       {state.kind === 'rejected' && <p className={styles.message}>No se pudo registrar la venta. Revisa los datos e inténtalo de nuevo.</p>}
       {state.kind === 'forbidden' && <p className={styles.message}>No tienes permiso para registrar ventas.</p>}

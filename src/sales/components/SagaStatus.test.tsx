@@ -113,7 +113,7 @@ describe('error de envío', () => {
     const { user, onRetry } = setup({ phase: 'submit-failed', kind: 'uncertain', traceId: 'trace-1' })
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('No se pudo confirmar si la venta fue recibida')
-    expect(alert).toHaveTextContent('la misma solicitud sin duplicar la venta')
+    expect(alert).toHaveTextContent('Se conservará la clave de la solicitud original')
     expect(alert).toHaveTextContent('Referencia: trace-1')
     expect(alert).not.toHaveTextContent(/Raw English|Network error/)
     await user.click(screen.getByRole('button', { name: 'Reintentar envío' }))

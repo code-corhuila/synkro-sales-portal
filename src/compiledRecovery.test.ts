@@ -1,3 +1,4 @@
+// @ts-expect-error Build-time JavaScript module, exercised directly by this regression.
 import { findViolations } from '../scripts/compiledCheck.mjs'
 
 const binding = 'const STORAGE_KEY = "synkro.sales.intent.v1";'
