@@ -1,11 +1,14 @@
 # Proposed Host session recovery contract
 
-Status: **PROPOSED, not approved or implemented by synkro-front**. This portal
-does not change the Host. Registration is disabled with an explicit Spanish
-message when the required capabilities are unavailable. History and detail
-remain independent. This is not acceptance of HU-VEN-12 or the platform.
+Status: **implemented and tested in an unintegrated Front candidate**:
+`49eb6d1a5ea1b27e561d854b76009e3a297ce019`, Front PR #41. Candidates #42 and
+#43 have the same tree `ce447aac7ec9bbed4422ada815014e497f9c9d3f`. These are not
+integrated permanent-branch releases or tagged artifacts. This portal does not
+change the Host or ratify a pending ADR. Registration is enabled by the candidate
+capabilities and stays disabled on older Hosts lacking them. History/detail are
+independent. Full-platform acceptance is not claimed.
 
-## Required Host change
+## Host contract verified in candidate
 
 Extend the existing federated `shell/session` object:
 
@@ -28,7 +31,7 @@ may notify but must retain the identifier. Unsubscribe is idempotent. Subscriber
 must not perform authentication or create a second identity issuer. A remote
 mounted after restoration reads the ready snapshot, never transient credentials.
 
-Required Host acceptance tests (pending in that repository): real Auth login;
+Required Host acceptance tests (reported and evidenced by Front's candidate delivery): real Auth login;
 reload and renewal retain the identifier; logout publishes null and notifies;
 new login rotates it; another user's login changes both identity and session;
 late responses from the previous session cannot restore it; protected 401 follows
@@ -54,8 +57,21 @@ request cannot replace that key. Double submission is synchronously locked.
 The retry deadline is 24 hours from the original submission and is not extended
 by retries. Expiration blocks unknown-result POSTs and requires reconciliation;
 it never silently deletes a key or authorizes a new sale. A known saga can still
-be checked by GET. Backend idempotency retention must be confirmed before approval;
-this local deadline is not a claim about Workflow retention guarantees.
+be checked by GET. Workflow release candidate
+`b3ecbe6c75f7038b9b8fe11d396bf00a642bb248` retains its unique
+`(saga_type,idempotency_key)` row without an age predicate, expiry column or
+application deletion operation. HTTP replays of controlled rows backdated 48 hours
+returned the same four saga states before and after JVM restart, without inserting
+another row. This verifies compatibility of that exact implementation with the
+24-hour local ceiling while its store is retained; it is not 48 hours elapsed or
+a documented indefinite operational retention SLA. Input/caller mismatch remains
+rejected. Workflow and the local deadline were not changed.
+
+If a future cleanup/restore policy cannot retain keys for the retry window, the
+safe alternative is to disable unknown-result POST retries until authoritative
+reconciliation (known sagas still use GET), or have Workflow's owner publish and
+implement a compatible minimum retention. Neither alternative is silently adopted
+as a new backend contract here.
 
 COMPLETED with a saleId and COMPENSATED clear the journal. FAILED retains its
 saga for attention; dismiss/clear cannot discard an uncertain or failed operation.
@@ -71,23 +87,32 @@ stock or compensate a backend saga**. Every asynchronous continuation checks its
 original owner; late results cannot complete a replacement session's sale.
 
 The optional declarations in `shell.d.ts` allow old Hosts to load history/detail
-without crashing. They do not assert that the proposal has been approved. No
+without crashing. They do not assert architectural ratification or promotion. No
 fallback based solely on user/tab identity is enabled.
 
 ## Verification and integration gate
 
-`registrationRecovery.test.tsx` uses a proposed-contract fake, not the real Host.
+`registrationRecovery.test.tsx` uses a contract fake, not the real Host.
 It covers same-key remount recovery, explicit GET, no automatic POST, uncertain
 clear/change, late identity response, unavailable storage, expiration, new session
 for the same person and notified logout. Existing tests cover double click,
 timeouts, bounded polling, terminal states and navigation. `compiledRecovery`
-checks keep arbitrary storage/credential access forbidden.
+checks keep arbitrary storage/credential access forbidden. Front's external
+delivery additionally verifies the same Sales source `7794cbf` with real Auth,
+Workflow and participants for reload, replay, logout and session replacement.
+The portal's complementary real-service browser run covers composed detail,
+authenticated history/deep links/Back/Forward, ownership, insufficient stock,
+post-reservation compensation and unavailable auxiliary metadata. Transport
+failures deliberately provoked in those runs are identified separately from
+unintercepted business transactions. Provenance and reproducible harness are
+retained in the external verification report.
 
 ADR-006 leaves human identity and credentials with Auth/Host; ADR-007 makes the
 persisted Workflow saga and its idempotent resource authoritative; ADR-010 leaves
 historical prices and totals in Sales. This proposal adds a browser recovery
-lifecycle that those decisions do not specify. It requires architectural review
-and an implemented Host contract before claiming real registration integration.
+lifecycle that those decisions do not specify. Its implementation is now present
+in the tested Front candidate; architectural documentation and permanent-branch
+integration remain pending. Actual CI is still required for merging the portal.
 
 Alternatives considered: user/tab-only storage cannot detect a new session for
 the same person and was rejected for that guarantee; Host-owned durable intent
