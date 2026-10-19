@@ -1,7 +1,8 @@
 # HU-VEN-12 verification status
 
-Updated 2026-10-18 (America/Bogota). Full functional acceptance and integration
-into develop are **pending**, not implied by checked boxes on the story.
+Updated 2026-10-18 (America/Bogota). Acceptance of the portal candidate now has
+real-service evidence; permanent-branch integration and full-platform acceptance
+remain pending. Checked story boxes are not used as evidence.
 
 ## Candidate and review
 
@@ -18,8 +19,8 @@ contract. Only merge commits may integrate the increments into develop.
 
 Findings addressed:
 
-- Durable intent recovery consumes a **proposed** Host lifecycle contract. It is
-  disabled on the current Host; see the proposal linked below.
+- Durable intent recovery consumes the lifecycle contract implemented in Front
+  candidate `49eb6d1`. It remains disabled on older Hosts without those capabilities.
 - Duplicate `.notice` and `.noticeText` definitions were removed.
 - Loading already had a `role="status"` announcement. The regression now checks
   that accessible status rather than only visible text.
@@ -27,8 +28,8 @@ Findings addressed:
   makes pending tracking unresolved and requires explicit observation on return.
   Unmount aborts in-flight requests and timers.
 - Uncertain/FAILED operations cannot be discarded to mint another intent.
-- Navigation primitives still require real authenticated Host acceptance.
-  Unit tests alone do not settle that integration finding.
+- Authenticated detail, deep links, reload and Back/Forward now passed against
+  the exact Front candidate and real Auth/Sales services.
 
 ## Local verification
 
@@ -42,9 +43,30 @@ its exact SHA. The preceding complete candidate passed both `/` and
 have an additional regression. Documentation-only updates do not change that
 executable tree.
 
-The recovery fake exposes the proposed identifier/subscription. These are
-contract tests, **not** real Auth/Workflow acceptance. Earlier browser images and
-intercepted API checks are historical frontend evidence only.
+Contract fakes remain distinct from real integration evidence. Front's external
+delivery (PR #41, verification comment 6257672318) provides 12 browser scenarios
+on immutable Sales `7794cbf`, including real login, registration, reload, explicit
+same-key replay, logout/session replacement and INVENTORY rejection. Its sources,
+dependency archives and image IDs were verified before reuse; it is not Front
+#36's head. The three Front candidate trees are identical but unintegrated.
+
+The portal's complementary run used its own freshly migrated PostgreSQL/Mongo,
+network, secrets and containers with the same immutable images. Seven scenarios
+passed: SALESPERSON registration/history/composed detail; authenticated detail
+deep link/Back/Forward/reload; unavailable Customers/Products metadata with intact
+sale and recovery; ADMIN registration; insufficient stock; real Sales overflow
+rejection after reservation followed by release; and foreign-sale 403/redirect.
+Independent store reads ended with two sales and stock 96 from the initial 100.
+The compensation fixture retained stock 2000 and its reservation was RELEASED.
+
+Normal registrations, searches, ownership and navigation were uninterrupted real
+transactions. Metadata outages deliberately stopped only the run's own services.
+Compensation used a valid boundary-price/quantity fixture to elicit a real Sales
+business rejection, not an intercepted response. Front's response-loss proxy and
+Products pause are controlled transport scenarios against real participants;
+proactive renewal/late-response/401/403 transport tests remain doubles.
+Sanitized reports, provenance, database counts and reproducible harness are kept
+outside Git. Historical intercepted screenshots do not establish business acceptance.
 
 Writes go exclusively through Workflow using `shell/apiClient`, with only
 customerId and productId/quantity lines. History/detail retain Sales amounts and
@@ -52,22 +74,32 @@ frozen prices. Auxiliary metadata failures preserve the valid Sales record.
 
 ## Integration gates
 
-The current Host exposes only `session.user()`. It cannot guarantee reload
-recovery with cleanup on logout and a new login by the same person. Registration
-is disabled when the proposed capabilities are absent; there is no fallback to
-user/tab-only isolation. See [the proposal](session-recovery-proposal.md), including
-required Host tests. No Host source or accepted ADR was changed here.
+Front #41 head `49eb6d1a5ea1b27e561d854b76009e3a297ce019` implements
+`user()`, `sessionId()` and `subscribe()`. #42/#43 have the same executable tree.
+The contract is available for candidate acceptance; it is not yet integrated in
+Front's permanent branches or tagged. The remaining delivery gates are actual
+CI and integration/deployment of the matching Host artifact, not absence of an
+implementation. See [the contract verification](session-recovery-proposal.md).
+No Host source or accepted ADR was changed here.
 
 GitHub Actions run `39179793600` for increment 1 reports three failed jobs with
 no executed steps. Its annotation states: "The job was not started because your
-account is locked due to a billing issue." Local checks do not authorize
+account is locked due to a billing issue." A fresh second attempt again failed
+all three jobs before any step. Local checks do not authorize
 substitution for the green-CI rule. No bypass is used.
 
-Real registration, stock change, one persisted sale, compensation, same-key
-replay, reload recovery, Auth roles, ownership and degraded metadata must be
-tested against compatible real participants after the Host contract is available.
-Dependencies moved since the historical implementation: an old Customers 501
-claim is not the current blocker. Approved tags or explicit unpromoted SHAs must
-be recorded for the eventual acceptance stack.
+Workflow candidate `b3ecbe6` uses a persistent unique key without an age cutoff,
+expiry field or application deletion. An additional real HTTP/PostgreSQL probe
+replayed four states at controlled age 48 hours before/after JVM restart: same
+saga, four rows total, modified request 400, other caller 403, app DELETE denied.
+Its signed identity/rows are test fixtures; this is not real Auth/business
+acceptance, a 48-hour elapsed soak, or an indefinite operational retention SLA.
+The exact implementation is compatible with the local 24-hour ceiling while
+the store is retained. Neither Workflow nor the deadline changed.
+
+Auth Portal v2.0.0 commit is `15f7334d33822aaace24ec25fa1a1097a43dbad0`;
+`9eae08a` is its annotated tag object. The previous build archive and extracted
+sources match that actual commit byte-for-byte; its old image revision label
+used the tag object and must not be interpreted as a commit.
 
 The story stays open. No qa/main promotion or tag is part of this delivery.
