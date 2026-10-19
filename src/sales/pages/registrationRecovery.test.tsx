@@ -130,3 +130,17 @@ it('sin contrato de sesión no inicia un registro imposible de aislar de forma s
   expect(posts()).toHaveLength(0)
   expect(result.current.blockedReason).toMatch(/versión de SynkroTech/)
 })
+
+it('ocultar el historial al navegar detiene la observación y conserva la saga para consulta explícita', async () => {
+  apiClient.request.mockResolvedValue(sagaFixture())
+  const view = renderHook(({ active }) => useRegisterSale({ active }), { initialProps: { active: true } })
+  act(() => view.result.current.submit(request))
+  await flush()
+  view.rerender({ active: false })
+  await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+  expect(apiClient.request).toHaveBeenCalledTimes(1)
+  expect(view.result.current.state).toMatchObject({ phase: 'unresolved', sagaId: ids.saga })
+  view.rerender({ active: true })
+  await flush()
+  expect(apiClient.request).toHaveBeenCalledTimes(1)
+})
