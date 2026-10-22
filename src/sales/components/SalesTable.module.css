@@ -29,11 +29,12 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.name {
+.identifier {
+  min-width: 22rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
-
-.identifier { font-family: var(--font-family-mono); overflow-wrap: anywhere; }
 .hint { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
 
 /* Prices and stock are numbers to scan and compare: mono, right-aligned, with
@@ -55,20 +56,6 @@
 .table th.endHeader,
 .table td.actionsCell {
   text-align: right;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.stock {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 /* A placeholder in a numeric column hugs the right edge, where the number will be. */
