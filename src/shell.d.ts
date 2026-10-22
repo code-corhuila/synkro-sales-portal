@@ -28,5 +28,9 @@ declare module 'shell/session' {
 
   export const session: {
     user(): ShellUser | null
+    // PROPOSED contract, not available in the current Host. Optional for runtime
+    // compatibility; registration stays blocked until both capabilities exist.
+    sessionId?(): string | null
+    subscribe?(listener: () => void): () => void
   }
 }
