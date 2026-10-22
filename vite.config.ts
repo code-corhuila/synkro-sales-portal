@@ -8,9 +8,10 @@ import { createFederationConfig } from './src/federation.config.ts'
 const double = (file: string) => fileURLToPath(new URL(`./src/test-doubles/${file}`, import.meta.url))
 
 export default defineConfig(({ mode }) => {
-  const { VITE_SHELL_ENTRY_URL } = loadEnv(mode, process.cwd(), 'VITE_')
+  const { VITE_SHELL_ENTRY_URL, VITE_BASE_PATH } = loadEnv(mode, process.cwd(), 'VITE_')
 
   return {
+    base: VITE_BASE_PATH || '/',
     // Under Vitest (mode "test") the federation plugin would rewrite the shell
     // imports into remote URLs, so tests alias them to fakes instead.
     plugins: [react(), ...(mode === 'test' ? [] : [federation(createFederationConfig(VITE_SHELL_ENTRY_URL || undefined))])],
