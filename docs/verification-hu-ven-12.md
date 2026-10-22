@@ -1,8 +1,70 @@
 # HU-VEN-12 verification status
 
-Updated 2026-10-18 (America/Bogota). Acceptance of the portal candidate now has
-real-service evidence; permanent-branch integration and full-platform acceptance
-remain pending. Checked story boxes are not used as evidence.
+Updated 2026-10-22 (America/Bogota). The 2026-10-22 section below is the current
+state; the sections after it are the 2026-10-18 record and are kept as history.
+Acceptance of the portal candidate has real-service evidence; remote CI and
+full-platform acceptance remain pending. Checked story boxes are not used as
+evidence.
+
+## Current state (2026-10-22)
+
+Candidate: develop `801d47689eb02c96c70d738752b959a48a1176b6` (tree
+`dc3aac6f213a5817ceb12740e8009c730e7208f3`). Front `v2.0.0`
+(`c43d024790cfc6345ddd266c04e6967a8d035702`) integrates the session contract that
+this document earlier called an unintegrated candidate.
+
+New local verification on a clean checkout of that SHA with Node 22.23.3: `npm ci`,
+`npm run lint`, `npm run build`, `npm run test -- --coverage` (242 tests;
+statements 96.43%, branches 94.64%, functions 99.48%, lines 99.49%) and
+`npm run check:compiled`; also builds with base `/` and `/remotes/sales/`, the two
+Python deployment tests, both container images and `nginx -t`. The repository has
+no `check` script; `check:compiled` is the compiled-remote check used by CI.
+
+New real-service run: the portal artifact built from that tree with
+`VITE_BASE_PATH=/remotes/sales/` and the Host entry as build input, behind Front
+`v2.0.0` and the `v2.0.0` tags of Auth API `e3ea374`, Auth DB `6c82703`, Auth
+Portal `15f7334`, Gateway `5e5c3d5`, Customers API `28caff4`, Customers DB
+`4c24733`, Customers Portal `4208839`, Products API `8c04934`, Products DB
+`043e485`, Products Portal `b407475`, Sales API `f163eb6`, Sales DB `344d917` and
+Workflow `09a1938`. Images were built from clean checkouts of those tags in
+disposable resources (PostgreSQL and Mongo on tmpfs, new keys and credentials,
+Auth-issued users and Workflow SERVICE credential; no dev sign-in). The Sales DB
+migration runner image is reused tooling; its changelog came from the tag checkout.
+Worker was not part of the run.
+
+One browser run passed 18 of 18 scenarios. Unintercepted real transactions:
+SALESPERSON login, registration, history and composed detail; deep link,
+Back/Forward and reload; ADMIN registration; INVENTORY denied before the remote
+loads; ownership 403 with redirect; insufficient stock rejected by Products;
+compensation after a reservation (a valid boundary fixture makes Sales reject the
+subtotal; the reservation ended RELEASED and no sale or stock change remained);
+logout, same-person new login and ADMIN session replacement, none of which
+recovered the previous owner's intent. Controlled faults against real
+participants: a pause of Products during a saga (reload shows an explicit status
+query and sends no POST); response loss after Workflow accepted the POST (reload
+sends no POST; the explicit retry reuses the same idempotency key and yields one
+sale); stopped Customers and Products (the sale stays visible with an
+incomplete-data notice and recovers on retry); stopped Sales portal container (the
+shell and Customers stay usable). Independent database reads afterwards: 6 sales,
+8 sagas with 8 distinct idempotency keys (6 COMPLETED, 2 COMPENSATED), stock 100
+to 88 for the normal product, reservations 6 RESERVED and 1 RELEASED. Retries did
+not duplicate a sale.
+
+Observation outside this repository: after the stopped Sales portal came back,
+the Host's "Reintentar módulo" button did not request the React remote again; a
+full page reload recovered it. Neither the Host nor the portal was changed.
+
+The Workflow retention probe (controlled 48 hours, before and after a JVM restart)
+below was run on `b3ecbe6` and was not repeated. `09a1938` differs from `b3ecbe6`
+by zero files, so the source is equivalent. The local 24-hour deadline remains a
+conservative limit; this is not an indefinite operational retention guarantee.
+
+Remote CI: the 2026-10-22 re-run of run `39190333516` (attempt 2) again failed its
+three jobs with no executed steps and the annotation "The job was not started
+because your account is locked due to a billing issue." It is not a green CI and
+local results do not replace it.
+
+## History: 2026-10-18 record
 
 ## Candidate and review
 
@@ -74,12 +136,11 @@ frozen prices. Auxiliary metadata failures preserve the valid Sales record.
 
 ## Integration gates
 
-Front #41 head `49eb6d1a5ea1b27e561d854b76009e3a297ce019` implements
-`user()`, `sessionId()` and `subscribe()`. #42/#43 have the same executable tree.
-The contract is available for candidate acceptance; it is not yet integrated in
-Front's permanent branches or tagged. The remaining delivery gates are actual
-CI and integration/deployment of the matching Host artifact, not absence of an
-implementation. See [the contract verification](session-recovery-proposal.md).
+Front #41 head `49eb6d1a5ea1b27e561d854b76009e3a297ce019` implemented
+`user()`, `sessionId()` and `subscribe()`; #42/#43 have the same executable tree.
+(At the time of this record they were unintegrated; Front `v2.0.0` has since
+released the contract.) The remaining delivery gates are actual CI and
+deployment of the matching Host artifact. See [the contract verification](session-recovery-proposal.md).
 No Host source or accepted ADR was changed here.
 
 GitHub Actions run `39179793600` for increment 1 reports three failed jobs with
@@ -102,4 +163,4 @@ Auth Portal v2.0.0 commit is `15f7334d33822aaace24ec25fa1a1097a43dbad0`;
 sources match that actual commit byte-for-byte; its old image revision label
 used the tag object and must not be interpreted as a commit.
 
-The story stays open. No qa/main promotion or tag is part of this delivery.
+The story stays open. This document does not claim acceptance of the whole platform.
