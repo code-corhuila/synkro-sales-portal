@@ -34,9 +34,11 @@ export function useSalesHistory() {
 
   const applyFilters = useCallback((filters: SalesFilters) => setQuery({ page: 1, ...cleanFilters(filters) }), [])
   const retry = useCallback(() => setAttempt((current) => current + 1), [])
+  // A new sale is the newest row: go back to the first page and ask again, keeping the filters.
+  const refresh = useCallback(() => { setQuery((current) => ({ ...current, page: 1 })); setAttempt((current) => current + 1) }, [])
   function goToPage(page: number) {
     if (state.status !== 'ready' || !Number.isSafeInteger(page) || page < 1 || page > state.value.meta.totalPages || page === query.page) return
     setQuery({ ...query, page })
   }
-  return { state, query, applyFilters, retry, goToPage }
+  return { state, query, applyFilters, retry, refresh, goToPage }
 }
