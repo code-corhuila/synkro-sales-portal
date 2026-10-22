@@ -1,14 +1,17 @@
-# Proposed Host session recovery contract
+# Host session recovery contract
 
-Status: **implemented and tested in an unintegrated Front candidate**:
-`49eb6d1a5ea1b27e561d854b76009e3a297ce019`, Front PR #41. Candidates #42 and
-#43 have the same tree `ce447aac7ec9bbed4422ada815014e497f9c9d3f`. These are not
-integrated permanent-branch releases or tagged artifacts. This portal does not
-change the Host or ratify a pending ADR. Registration is enabled by the candidate
-capabilities and stays disabled on older Hosts lacking them. History/detail are
-independent. Full-platform acceptance is not claimed.
+Status: **released in Front `v2.0.0`** (`c43d024790cfc6345ddd266c04e6967a8d035702`),
+which exposes `user()`, `sessionId()` and `subscribe()` through `shell/session`.
+The contract was first verified in Front candidate
+`49eb6d1a5ea1b27e561d854b76009e3a297ce019` (PR #41; #42 and #43 carry the same
+tree `ce447aac7ec9bbed4422ada815014e497f9c9d3f`); that evidence is historical and
+is kept below. On 2026-10-22 the portal was exercised against the released Host
+(see [verification](verification-hu-ven-12.md)). This portal does not change the
+Host or ratify a pending ADR. Registration is enabled by these capabilities and
+stays disabled on older Hosts lacking them. History/detail are independent.
+Full-platform acceptance is not claimed.
 
-## Host contract verified in candidate
+## Host contract (historical candidate evidence)
 
 Extend the existing federated `shell/session` object:
 
@@ -110,9 +113,9 @@ retained in the external verification report.
 ADR-006 leaves human identity and credentials with Auth/Host; ADR-007 makes the
 persisted Workflow saga and its idempotent resource authoritative; ADR-010 leaves
 historical prices and totals in Sales. This proposal adds a browser recovery
-lifecycle that those decisions do not specify. Its implementation is now present
-in the tested Front candidate; architectural documentation and permanent-branch
-integration remain pending. Actual CI is still required for merging the portal.
+lifecycle that those decisions do not specify. Its implementation is released in
+Front `v2.0.0`; architectural documentation of the lifecycle remains pending, and
+actual CI is still required for merging the portal.
 
 Alternatives considered: user/tab-only storage cannot detect a new session for
 the same person and was rejected for that guarantee; Host-owned durable intent
