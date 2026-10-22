@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.env
+*.env
+!*.env.example
+.idea/
+.DS_Store
+*.local
+
+.reference/
+coverage/
+.evidence/
+*.tsbuildinfo

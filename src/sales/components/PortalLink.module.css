@@ -1,0 +1,11 @@
+/* A link between screens: the secondary action colour, which reads on the card in
+   both themes, and an underline, so it is a link without relying on colour. */
+.link {
+  color: var(--color-secondary-action);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.link:hover {
+  text-decoration-thickness: 0.15em;
+}
