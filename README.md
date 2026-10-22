@@ -28,11 +28,29 @@ Cada cambio cancela la petición anterior y descarta respuestas tardías. Loadin
 
 Fechas: `es-CO`, `America/Bogota`. Total autoritativo: COP con dos decimales mediante división/resto BigInt, sin sumar líneas ni hacer cálculos financieros flotantes. El host deserializa int64 como number; la precisión perdida fuera de `Number.MAX_SAFE_INTEGER` no puede recuperarse. En esos casos se muestra «Importe fuera del rango seguro». Admitir exactamente todo int64 requiere una futura decisión del contrato compartido; aquí no se cambia el transporte.
 
-Cliente muestra el UUID completo, sin nombres inventados ni N+1. `Ver` está deshabilitado y explicado; `saleDetailPath` y `data-planned-route` identifican `/sales/{id}` para una futura entrega. Registro, saga, detalle completo, reportes, lookup de clientes e infraestructura raíz están fuera de alcance.
+El historial muestra el UUID completo del cliente, sin N+1; el nombre se resuelve solo en el detalle (HU-VEN-12). `Ver` abre `/sales/{id}`.
 
 CSS Modules consumen los tokens del host en ambos temas. No hay `:root`, colores ni fuentes globales propios. Véanse [paridad visual](docs/visual-parity.md) y [verificación y bloqueo del host](docs/verification.md).
 
 Vitest, Testing Library, user-event, jsdom y V8 usan aliases a dobles de shell. Los datos simulados aparecen solo en tests. Las pruebas unitarias no hacen HTTP ni requieren backend/bases de datos. El mínimo de statements es 70% global y 70% para Sales; todos los módulos de producción participan.
+
+## HU-VEN-12 — registro por saga y detalle compuesto
+
+Extiende `/sales` (sin ruta de registro aparte) y añade `/sales/{id}`; referencia `Refs code-corhuila/synkro-docs#246`. Contratos: `synkro-workflow.yaml` 2.1.0, `synkro-sales-api.yaml` 2.1.0, `synkro-customers-api.yaml` 2.0.0, `synkro-products-api.yaml` (docs/main).
+
+**Formulario «Nueva venta».** Cliente por documento exacto (`GET /api/v1/customers?identityDocument=`, único filtro documentado; solo clientes activos son seleccionables) y productos por nombre (`GET /api/v1/products?name=&active=true&limit=10`). No se precarga ningún catálogo. De 1 a 100 líneas, cantidades enteras positivas, un producto una sola vez, errores junto al campo, «Limpiar», total estimado rotulado «referencial» (precio de catálogo × cantidad con enteros exactos; nunca autoritativo). Sin llamadas al backend si la validación cliente falla.
+
+**Registro.** Solo `POST /api/v1/sagas/register-sale` con `{ customerId, lines: [{ productId, quantity }] }` (lista blanca en `workflowApi.ts`) y `GET /api/v1/sagas/{id}`, mediante `shell/apiClient`. Nunca se envían `createdBy`, precios, subtotales, totales, `saleId` ni credenciales SERVICE, y el navegador no llama a `POST /sales`.
+
+**Idempotencia.** Una clave `crypto.randomUUID()` por intención (cliente + conjunto de líneas, independiente del orden). Un fallo de red/timeout/5xx conserva la clave: reintentar la misma solicitud la reutiliza, sin reintentos automáticos. Cambiar cliente, producto o cantidad crea una intención y clave nuevas. Si ya se conoce la saga se observa; no se envía otro POST. Un resultado `COMPENSATED` cierra la intención: repetirla es una intención nueva.
+
+**Estados de la saga** (`sagaMachine.ts`, `useRegisterSale.ts`): `RUNNING` → «Procesando venta…» con sondeo acotado (1 s, 2 s, 3 s, luego 5 s; máximo 120 s; se cancela al desmontar o sustituir). `COMPLETED` exige `saleId`, confirma «Venta registrada», lee el total autoritativo con `GET /sales/{saleId}`, recarga el historial en la página 1 y limpia el formulario. `COMPENSATED` muestra el texto aprobado (paso en español, sin enum), conserva el formulario. `FAILED` es un aviso de atención con el ID de la saga; no afirma reversión ni invita a reintentar como venta nueva. Agotar el tiempo o perder la consulta deja la saga *sin resolver* (ni éxito ni fracaso) con «Consultar estado».
+
+**Detalle.** `GET /sales/{id}` es autoritativo; luego un `GET /customers/{id}` y un `GET /products/{id}` por producto distinto, con concurrencia máxima 4. Si faltan, se muestra el identificador almacenado y un aviso con «Reintentar información»; los precios y totales son siempre los congelados de Sales. `404` → «Venta no encontrada»; `403` → `/sales` (reemplazando la entrada del historial) con aviso en español; otros errores → alerta con «Reintentar».
+
+**Navegación.** `src/navigation.ts` sigue el patrón de Products (`pushState` + `popstate`). Como `/sales` y `/sales/{id}` son una sola ruta del host (`/sales/*`), el host no vuelve a renderizar el remoto al pasar de una a otra; `App` se suscribe a `popstate` por sí misma (hallazgo de la verificación en navegador; el aviso del 403 viaja en el estado de la entrada del historial, no en la URL ni en el almacenamiento).
+
+Evidencia, brechas de contrato y dependencias reales pendientes: [verificación HU-VEN-12](docs/verification-hu-ven-12.md). La paridad visual está en [docs/visual-parity.md](docs/visual-parity.md).
 
 ## Contenedor y CI
 
@@ -66,6 +84,12 @@ rule.
 Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
 
 ## Internal root delivery
+
+HU-VEN-12 current status: [verification and integration gates](docs/verification-hu-ven-12.md).
+Intent recovery uses the [Host session lifecycle contract](docs/session-recovery-proposal.md)
+verified in Front candidate `49eb6d1` (not integrated/tagged). On older Hosts
+without it, new registration is disabled; history and composed detail remain available.
+This portal change does not modify Front or ratify a pending architectural decision.
 
 The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 internally, and joins external `platform`; it publishes no host port. The host proxies `/remotes/sales/` to it. `VITE_BASE_PATH` reaches Vite through Compose and Docker; npm and direct Docker builds default to `/`, while Compose defaults to `/remotes/sales/`. Select `/` explicitly for a standalone container build. Preview remains available on 5176 for local npm use.
 
