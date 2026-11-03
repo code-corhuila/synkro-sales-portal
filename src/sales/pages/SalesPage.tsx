@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { session } from 'shell/session'
 import type { FilterErrors, SalesFilters } from '../model/filters'
+import { SalesSections } from '../components/SalesSections'
 import { SalesFilterBar } from '../components/SalesFilterBar'
 import { SalesTable } from '../components/SalesTable'
 import { SalesTableSkeleton } from '../components/SalesTableSkeleton'
@@ -34,6 +35,7 @@ export function SalesPage({ active = true }: { active?: boolean } = {}) {
     <header className={styles.header}>
       <h1 className={styles.title}>Ventas</h1>
       <p className={styles.subtitle}>{user?.role === 'SALESPERSON' ? 'Consulta el historial de tus ventas.' : 'Consulta el historial de ventas.'}</p>
+      <SalesSections current="history" />
     </header>
     {notice && <div role="alert" className={styles.notice}>
       <p className={styles.noticeText}>No tienes permiso para ver esa venta. Solo puedes consultar las ventas que registraste tú.</p>

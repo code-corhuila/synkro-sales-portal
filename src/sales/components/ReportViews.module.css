@@ -1,0 +1,40 @@
+/* Navigation between the Sales screens: links that read as tabs, wrapping on a narrow screen.
+   The current one is marked by weight and underline as well as colour. */
+.sections { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; list-style: none; }
+.section {
+  display: inline-block;
+  padding: var(--space-1) 0;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+.section:hover { color: var(--color-text-primary); text-decoration: underline; }
+.section[aria-current='page'] { color: var(--color-text-primary); text-decoration: underline; text-underline-offset: var(--space-1); }
+
+.filters { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-4); padding-bottom: var(--space-4); }
+.filters > * { flex: 1 1 12rem; min-width: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); padding-top: var(--space-6); }
+
+/* The table keeps a readable width; a narrow screen scrolls the table inside this box, never the page. */
+.scroller { overflow-x: auto; max-width: 100%; }
+.table {
+  width: 100%;
+  min-width: 24rem;
+  border-collapse: collapse;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+.table th, .table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-text-disabled); text-align: left; vertical-align: middle; }
+.table th { color: var(--color-text-secondary); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.table th.numericHeader, .table td.numeric { text-align: right; }
+.numeric { font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.product { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.productName { font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
+.productId { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
+
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3) var(--space-4); padding-top: var(--space-4); }
+.position { color: var(--color-text-primary); font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; font-size: var(--font-size-sm); line-height: var(--line-height-normal); }
+
+@media (prefers-reduced-motion: reduce) { .section { transition: none; } }
