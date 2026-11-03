@@ -7,6 +7,9 @@ export const SALES_PATH = '/sales'
 
 export const saleDetailPath = (saleId: string) => `${SALES_PATH}/${encodeURIComponent(saleId)}`
 
+// The three report screens (daily, monthly, top-products) live under /sales/reports.
+export const reportPath = (kind: 'daily' | 'monthly' | 'top-products') => `${SALES_PATH}/reports/${kind}`
+
 export function navigateTo(path: string): void {
   const current = window.location.pathname + window.location.search + window.location.hash
   if (path === current) return
