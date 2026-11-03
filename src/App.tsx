@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import { parseRoute } from './routes'
+import { ReportsPage } from './sales/pages/ReportsPage'
 import { SaleDetailPage } from './sales/pages/SaleDetailPage'
 import { SalesPage } from './sales/pages/SalesPage'
 
@@ -24,6 +25,7 @@ export default function App() {
   if (!route) return null
   return <>
     {(opened || onHistory) && <div hidden={!onHistory}><SalesPage active={onHistory} /></div>}
-    {route.screen === 'detail' && <SaleDetailPage key={route.saleId} saleId={route.saleId} />}
+    {route.screen === 'report' && <ReportsPage kind={route.kind} />}
+    {route.screen === 'detail' &&<SaleDetailPage key={route.saleId} saleId={route.saleId} />}
   </>
 }
