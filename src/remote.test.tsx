@@ -10,7 +10,7 @@ import App from './App'
 describe('contrato del remoto', () => {
   it('expone Sales con React compatible y shell', () => {
     expect(federationConfig).toEqual({
-      name: 'salesPortal', filename: 'remoteEntry.js', exposes: { './App': './src/App.tsx' },
+      name: 'salesPortal', filename: 'remoteEntry.js', exposes: { './App': './src/App.tsx', './DashboardSummary': './src/sales/pages/DashboardSummary.tsx' },
       remotes: { shell: 'http://localhost:5173/assets/remoteEntry.js' },
       shared: { react: { requiredVersion: '^19.2.8' }, 'react-dom': { requiredVersion: '^19.2.8' } },
     })
@@ -71,7 +71,7 @@ describe('rutas de Sales', () => {
     act(() => { window.history.back() })
   })
   it('un id no UUID muestra «Venta no encontrada» sin consultar Sales', () => {
-    window.history.replaceState({}, '', '/sales/reports')
+    window.history.replaceState({}, '', '/sales/no-es-un-uuid')
     double.request.mockReset()
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Venta no encontrada' })).toBeVisible()

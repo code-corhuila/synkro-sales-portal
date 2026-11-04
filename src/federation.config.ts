@@ -4,7 +4,8 @@ export function createFederationConfig(shellEntryUrl = 'http://localhost:5173/as
   return {
     name: 'salesPortal',
     filename: 'remoteEntry.js',
-    exposes: { './App': './src/App.tsx' },
+    // The dashboard summary is a module of its own: the Host mounts it on /dashboard.
+    exposes: { './App': './src/App.tsx', './DashboardSummary': './src/sales/pages/DashboardSummary.tsx' },
     remotes: { shell: shellEntryUrl },
     shared: {
       react: { requiredVersion: REACT_RANGE },
