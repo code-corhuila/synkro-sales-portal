@@ -10,6 +10,7 @@ import { SalesError } from '../components/SalesError'
 import { SalesPagination } from '../components/SalesPagination'
 import { NewSalePanel } from '../components/NewSalePanel'
 import { Button } from '../components/Button'
+import { HistoryExport } from '../components/HistoryExport'
 import { clearSalesNotice, peekSalesNotice } from '../../navigation'
 import { useSalesHistory } from './useSalesHistory'
 import styles from './SalesPage.module.css'
@@ -45,6 +46,7 @@ export function SalesPage({ active = true }: { active?: boolean } = {}) {
     <section aria-labelledby={title} className={styles.history}>
       <h2 id={title} className={styles.historyTitle}>Historial</h2>
       <SalesFilterBar filters={draft} errors={errors} onChange={setDraft} onErrors={setErrors} onApply={history.applyFilters} onClear={clear} />
+      {active && (user?.role === 'ADMIN' || user?.role === 'SALESPERSON') && <HistoryExport filters={history.query} />}
       {history.state.status === 'loading' && <SalesTableSkeleton />}
       {history.state.status === 'error' && <SalesError error={history.state.error} onRetry={history.retry} />}
       {history.state.status === 'ready' && <>
