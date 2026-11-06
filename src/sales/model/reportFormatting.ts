@@ -23,3 +23,12 @@ export function formatUtcMonth(value: string): string {
 export function countLabel(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`
 }
+
+// A chart or table never shows more than the current page: this says so, instead of letting a
+// truncated page read as the whole range. `meta.total` is authoritative; `count` is what is
+// actually on screen (always `<= meta.total`).
+export function visibleScopeLabel(count: number, meta: { total: number; totalPages: number }, singular: string, plural: string): string {
+  if (!meta.total) return ''
+  const group = meta.totalPages > 1 ? `${count} de ${meta.total} ${plural}` : countLabel(count, singular, plural)
+  return `Mostrando ${group} del rango seleccionado.`
+}

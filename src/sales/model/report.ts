@@ -13,6 +13,11 @@ export type ReportKind = keyof ReportRows
 
 export const REPORT_KINDS: readonly ReportKind[] = ['daily', 'monthly', 'top-products']
 
+// The two report kinds a sales series can toggle between (the dashboard trend never offers
+// top-products as a series: it gets its own, always-visible panel instead).
+export type SeriesKind = 'daily' | 'monthly'
+export const SERIES_KINDS: readonly SeriesKind[] = ['daily', 'monthly']
+
 // What the person reads for each report.
 export const REPORT_TEXT: Record<ReportKind, { title: string; table: string; nav: string; singular: string; plural: string }> = {
   daily: { title: 'Reporte diario', table: 'Totales diarios de ventas', nav: 'Diarios', singular: 'día', plural: 'días' },

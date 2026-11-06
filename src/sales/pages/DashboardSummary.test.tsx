@@ -25,16 +25,18 @@ const reportCalls = () => apiClient.request.mock.calls.filter(([path]) => path.i
 it('muestra tres resúmenes reales con límite mínimo, sin filtros y sin totales inventados', async () => {
   render(<DashboardSummary />)
   const daily = await screen.findByRole('region', { name: 'Último día con ventas' })
-  expect(within(daily).getByText(/1\.234\.567,89/)).toBeVisible()
+  expect(await within(daily).findByText(/1\.234\.567,89/)).toBeVisible()
   expect(within(daily).getByText(/12.*oct.*2026/i)).toBeVisible()
   expect(within(daily).getByText(/3 ventas/)).toBeVisible()
   const monthly = await screen.findByRole('region', { name: 'Mes más reciente' })
-  expect(within(monthly).getByText(/999,00/)).toBeVisible()
+  expect(await within(monthly).findByText(/999,00/)).toBeVisible()
   expect(within(monthly).getByText(/7 ventas/)).toBeVisible()
   const top = await screen.findByRole('region', { name: 'Productos más vendidos' })
   expect(await within(top).findByText('Teclado mecánico')).toBeVisible()
   expect(within(top).getByText(/12 unidades/)).toBeVisible()
-  expect(reportCalls().map(([path, options]) => [path, options?.query])).toEqual([
+  // The first three report calls are the three static tiles; the interactive trend below them
+  // (HU-FE-10) issues further calls of its own, covered in DashboardTrend.test.tsx.
+  expect(reportCalls().slice(0, 3).map(([path, options]) => [path, options?.query])).toEqual([
     ['/api/v1/sales/reports/daily', { page: 1, limit: 1 }],
     ['/api/v1/sales/reports/monthly', { page: 1, limit: 1 }],
     ['/api/v1/sales/reports/top-products', { page: 1, limit: 3 }],
