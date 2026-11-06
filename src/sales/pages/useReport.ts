@@ -5,7 +5,7 @@ import { cleanFilters, type SalesFilters } from '../model/filters'
 import type { Page } from '../model/page'
 import type { ReportKind, ReportRows } from '../model/report'
 
-type State<K extends ReportKind> = { status: 'loading' } | { status: 'ready'; value: Page<ReportRows[K]> } | { status: 'error'; error: unknown }
+export type ReportState<K extends ReportKind> = { status: 'loading' } | { status: 'ready'; value: Page<ReportRows[K]> } | { status: 'error'; error: unknown }
 type Query = { page: number; from?: string; to?: string }
 interface Options { enabled?: boolean; limit?: number }
 
@@ -15,8 +15,8 @@ interface Options { enabled?: boolean; limit?: number }
 export function useReport<K extends ReportKind>(kind: K, { enabled = true, limit }: Options = {}) {
   const [query, setQuery] = useState<Query>({ page: 1 })
   const [attempt, setAttempt] = useState(0)
-  const [answer, setAnswer] = useState<{ kind: K; query: Query; attempt: number; state: State<K> } | null>(null)
-  const state: State<K> = answer?.kind === kind && answer.query === query && answer.attempt === attempt ? answer.state : { status: 'loading' }
+  const [answer, setAnswer] = useState<{ kind: K; query: Query; attempt: number; state: ReportState<K> } | null>(null)
+  const state: ReportState<K> = answer?.kind === kind && answer.query === query && answer.attempt === attempt ? answer.state : { status: 'loading' }
 
   useEffect(() => {
     if (!enabled) return

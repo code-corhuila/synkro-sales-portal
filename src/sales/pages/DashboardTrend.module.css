@@ -1,0 +1,6 @@
+.trend { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-bg-card); box-shadow: var(--shadow-sm); }
+.title { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.toggle { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.panelTitle { margin: 0; color: var(--color-text-primary); font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); }
+.note { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; }
