@@ -108,7 +108,83 @@ the table scrolls horizontally.
 - `DashboardSummary`: three tiles, partial failure, retry, links.
 - `sourceContract`/federation config: one extra exposed module, still no fetch/storage/router.
 
+## Interactive trend (HU-FE-10)
+
+Status: design written **before** the tests and the code (test-first), same rule as the rest of
+this document. Extends `./DashboardSummary` only; introduces no route, no endpoint, no package and
+no change to the three static tiles above, the history screen or the Excel export (a separate
+branch).
+
+### Scope
+
+A fourth, interactive piece of the dashboard summary, below the three tiles and gated by the same
+`canReadReports(role)` check (so `INVENTORY` still renders nothing and issues no request): one
+shared, inclusive UTC date range drives both a daily/monthly sales series and a top-products
+breakdown, each reusing the exact report the full screens already expose
+(`GET /api/v1/sales/reports/{daily,monthly,top-products}`, same `page`/`limit`/`from`/`to`
+whitelist, same `cleanFilters`/`validateFilters`).
+
+- **Shared range.** One `ReportFilterBar` (reused as-is) feeds both queries at once: applying or
+  clearing the filter calls `applyFilters` on the series hook and on the top-products hook
+  together, so they can never disagree about the range.
+- **Daily/monthly toggle.** Two buttons (`role="group"`, `aria-pressed`) switch which report backs
+  the series — `useReport` is called once for the series with the kind itself as state, so the same
+  hook instance keeps its `from`/`to` (and page) across the toggle; only the report kind changes,
+  exactly the case `useReport.test.ts` already proves does not mix responses.
+- **Top-products bars.** A second, independent `useReport('top-products', { limit: 5 })` call is
+  filtered by the same shared range. Unlike the static "Productos más vendidos" tile (all-time,
+  unfiltered, labelled so), this one honours the range — a different, clearly separate piece of UI.
+- **Chart + table.** Each of the two panels (series, top-products) renders one accessible SVG bar
+  chart (`aria-hidden`, decorative) immediately followed by the exact same reused table component
+  the full report screens use (`ReportTable`, with its caption-equivalent `aria-label`, `scope="col"`
+  headers and right-aligned tabular figures) — the table is the one source of truth for assistive
+  tech and for anyone who cannot or does not want to read the chart.
+- **Visible-limit label.** A chart/table only ever shows the current page. A sentence under each
+  pair states, in Spanish, whether that page is the whole range (`"Mostrando los 3 días del rango
+  seleccionado."`) or a truncated page of a larger range (`"Mostrando los primeros 20 de 45 días del
+  rango seleccionado."`), followed by the existing `ReportPagination` (which already names the total
+  and the page size). Neither sentence nor chart is ever presented as the total for the range when
+  `meta.totalPages > 1`.
+- **Four states, per panel.** Loading (`ReportTableSkeleton`), error (`ReportError`, 401/403 not
+  retryable, other causes retryable, trace id shown), empty (`ReportEmpty`, filtered vs. unfiltered
+  wording), data — all reused from the existing report components, so one failing panel does not
+  hide the other (same rule as the three tiles).
+- **Stale responses.** Both panels delegate entirely to `useReport`: every filter/kind/retry change
+  aborts the previous request and a late answer can never replace the current one. No new
+  cancellation logic is written for this feature.
+- **Tokens and focus.** New CSS adds no palette, hex value or `:root`; it only reads existing
+  tokens (`--color-primary-500`/`--color-primary-300` for the bars, `--space-*`, `--radius-lg`,
+  `--shadow-sm`, the existing font tokens). The toggle buttons and chart bars sit inside the
+  dashboard's existing `.summary :focus-visible` rule, so keyboard focus stays visible without a new
+  rule.
+- **Role scope.** The portal still never sends an ownership parameter; `SALESPERSON` gets whatever
+  the token scopes them to. Query-key tests assert the request only ever carries `page`, `limit`
+  and, when applied, `from`/`to`.
+
+### Test plan (written first)
+
+- `model/reportFormatting` (`visibleScopeLabel`): whole-range vs. truncated-page wording, singular
+  vs. plural, empty range produces no claim.
+- `components/SalesTrendChart`: bar count matches the data, zero value never produces a negative or
+  NaN height, empty data renders nothing, the chart stays `aria-hidden`.
+- `pages/DashboardTrend`:
+  - **Range**: applying a range calls both the series and the top-products endpoint with the same
+    `from`/`to` and resets both to page 1; clearing does the same with no date params.
+  - **Toggle**: switching daily ↔ monthly re-queries the new kind with the *same* `from`/`to`
+    already applied — the range is never lost.
+  - **Data**: real rows render in the chart and in the reused table with no invented total; the
+    visible-limit sentence says "primeros N de M" only when the range has more than one page.
+  - **Roles**: the request never carries an ownership parameter (`SALESPERSON`); the whole section
+    (inherited from `DashboardSummary`) issues zero requests for `INVENTORY`.
+  - **Recovery**: a failing panel shows its own retryable error and recovers on retry without
+    disturbing the other panel; a superseded (stale) response is discarded, matching `useReport`'s
+    existing contract.
+- `DashboardSummary`: unchanged assertions about the three tiles now check the first three report
+  calls specifically (`reportCalls().slice(0, 3)`), since the new section issues further calls of
+  its own; every other assertion in that suite needed no change.
+
 ## Verification
 
-Filled in the PR and in `docs/verification-hu-fe-09.md` once real executions exist, separating
+Filled in the PR and in `docs/verification-hu-fe-09.md` (tiles) and
+`docs/verification-hu-fe-10.md` (interactive trend) once real executions exist, separating
 mock-based tests from real-service browser runs and recording exact revisions.
