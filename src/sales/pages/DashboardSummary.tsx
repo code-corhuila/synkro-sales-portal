@@ -7,6 +7,7 @@ import { reportFailureMessage } from '../components/ReportStates'
 import { formatCents } from '../model/formatting'
 import { canReadReports, type ReportKind, type ReportRows } from '../model/report'
 import { countLabel, formatUtcDay, formatUtcMonth } from '../model/reportFormatting'
+import { DashboardTrend } from './DashboardTrend'
 import { useProductNames, useReport } from './useReport'
 import styles from './DashboardSummary.module.css'
 
@@ -36,6 +37,7 @@ export default function DashboardSummary() {
       }}</Tile>
       <Tile kind="top-products" title="Productos más vendidos" limit={3}>{(rows) => <TopList rows={rows as ReportRows['top-products'][]} />}</Tile>
     </div>
+    <DashboardTrend />
   </section>
 }
 
