@@ -111,9 +111,9 @@ the table scrolls horizontally.
 ## Interactive trend (HU-FE-10)
 
 Status: design written **before** the tests and the code (test-first), same rule as the rest of
-this document. Extends `./DashboardSummary` only; introduces no route, no endpoint, no package and
-no change to the three static tiles above, the history screen or the Excel export (a separate
-branch).
+this document. Extends `./DashboardSummary` using the existing report endpoints and dependencies.
+It preserves the original three summary queries and the existing history and Excel workflows.
+The later HTML-based refinement below updates the layout and quick date controls.
 
 ### Scope
 
@@ -184,6 +184,22 @@ whitelist, same `cleanFilters`/`validateFilters`).
   its own; every other assertion in that suite needed no change.
 
 ## Verification
+
+### Dashboard layout from the approved HTML references
+
+HU-FE-10 adopts the supplied light/dark layouts through the existing Host tokens. The Host owns
+"Panel de control" and the portal retains "Resumen de ventas" and the seller-specific wording.
+Compact summary cards precede a two-column income chart and horizontal product ranking.
+Native date controls remain owned by ReportFilterBar. Quick ranges use inclusive UTC days.
+The selected quick range reflects the applied query, while Personalizado focuses the first
+manual date field. Chart point buttons expose the selected date, amount and sale count with
+keyboard support. Data tables remain available in bounded, collapsible regions.
+
+The report contract ranks products by quantity, so bar lengths and the label use units sold.
+Revenue remains a secondary value. Summary cards retain their existing, explicit time scopes.
+The supplied demonstration totals, growth percentages, categories and seller breakdowns do not
+establish new report contracts. Those additions need API design and verification before delivery.
+The portal consumes the Host theme and font tokens without loading external fonts.
 
 Filled in the PR and in `docs/verification-hu-fe-09.md` (tiles) and
 `docs/verification-hu-fe-10.md` (interactive trend) once real executions exist, separating

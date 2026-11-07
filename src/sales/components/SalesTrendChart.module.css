@@ -1,8 +1,40 @@
-.plot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2); margin-block: var(--space-3); }
-.scale { display: flex; flex-direction: column; justify-content: space-between; height: 6rem; text-align: end; font-size: .75rem; color: var(--color-text-secondary); }
+.plot { display: flex; flex-direction: column; gap: var(--space-2); margin-block: var(--space-3); min-width: 0; }
+.readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-bg-page); }
+.readoutLabel { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+.readoutValue { font-family: var(--font-family-mono); font-size: var(--font-size-base); font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; color: var(--color-text-primary); }
+.readoutDetail { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .area { min-width: 0; }
-.chart { display: block; width: 100%; height: 6rem; border-bottom: 1px solid var(--color-text-secondary); }
-.ticks { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2); font-size: .75rem; color: var(--color-text-secondary); }
-.ticks span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart { display: block; width: 100%; height: 12rem; border-bottom: 1px solid var(--color-text-disabled); }
 .bar { fill: var(--color-primary-500); }
-@media (prefers-color-scheme: dark) { .bar { fill: var(--color-primary-300); } }
+.barActive { fill: var(--color-primary-700); }
+@media (prefers-color-scheme: dark) { .bar { fill: var(--color-primary-300); } .barActive { fill: var(--color-primary-500); } }
+.points { display: flex; gap: var(--space-1); overflow-x: auto; padding-block: var(--space-1); }
+.point {
+  min-height: var(--space-6);
+  flex: 0 0 auto;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-xs);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.point[aria-pressed='true'] { color: var(--color-primary-700); font-weight: var(--font-weight-semibold); background: var(--color-primary-50); border-color: var(--color-primary-500); }
+.point:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
+@media (prefers-color-scheme: dark) {
+  .point[aria-pressed='true'] { color: var(--color-primary-300); background: transparent; border-color: var(--color-primary-300); }
+  .point:focus-visible { outline-color: var(--color-primary-300); }
+}
+
+.ranking { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.rankItem { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.rankHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); font-size: var(--font-size-sm); }
+.rankName { display: flex; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; font-weight: var(--font-weight-semibold); color: var(--color-text-primary); }
+.rankNumber { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; }
+.rankValue { flex: none; font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; font-weight: var(--font-weight-semibold); white-space: nowrap; color: var(--color-text-primary); }
+.rankTrack { height: var(--space-2); overflow: hidden; background: var(--color-text-disabled); border-radius: var(--radius-full); }
+.rankFill { display: block; height: 100%; background: var(--color-primary-500); border-radius: var(--radius-full); }
+@media (prefers-color-scheme: dark) { .rankFill { background: var(--color-primary-300); } }
+.rankDetail { align-self: flex-end; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
