@@ -47,7 +47,7 @@ function TopList({ rows }: { rows: ReportRows['top-products'][] }) {
     <ul className={styles.list}>
       {rows.map((row) => <li key={row.productId} className={styles.item}>
         {names[row.productId] ? <span className={styles.itemName}>{names[row.productId]}</span> : null}
-        <span className={styles.itemId}>{row.productId}</span>
+        {!names[row.productId] && <span className={styles.itemId}>{row.productId}</span>}
         <span className={styles.detail}>{countLabel(row.totalQuantity, 'unidad', 'unidades')} · {formatCents(row.totalRevenueCents)}</span>
       </li>)}
     </ul>
