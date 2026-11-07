@@ -7,7 +7,9 @@ function files(directory: string): string[] {
 }
 const styles = files('src').filter((file) => file.endsWith('.css')).map((file) => readFileSync(file, 'utf8')).join('\n')
 it('consume temas del host sin raíces, paletas, fuentes ni tokens locales', () => {
-  expect(styles).not.toMatch(/:root|#[\da-f]{3,8}\b|\b(?:rgb|hsl)a?\(|@font-face|@import|--[\w-]+\s*:/i)
+  // Leer el tema del Host (:root[data-theme='dark'] .x) no define nada: se permite solo esa forma.
+  const ownedStyles = styles.replaceAll(":root[data-theme='dark']", '')
+  expect(ownedStyles).not.toMatch(/:root|#[\da-f]{3,8}\b|\b(?:rgb|hsl)a?\(|@font-face|@import|--[\w-]+\s*:/i)
   expect(styles).toContain('background: var(--color-bg-card)')
   expect(styles).toContain('box-shadow: var(--shadow-md)')
   expect(styles).toContain('font-family: var(--font-family-heading)')
@@ -15,7 +17,7 @@ it('consume temas del host sin raíces, paletas, fuentes ni tokens locales', () 
   expect(styles).toContain('text-transform: uppercase')
   expect(styles).toContain('text-align: right')
   expect(styles).toContain('font-variant-numeric: tabular-nums')
-  expect(styles).toContain('prefers-color-scheme: dark')
+  expect(styles).toContain("data-theme='dark'")
   expect(styles).toContain('prefers-reduced-motion: reduce')
   expect(styles).toContain(':focus-visible')
 })
@@ -32,4 +34,8 @@ it('el código de producción solo importa capacidades compartidas sin transport
   const storageUsers = files('src').filter((file) => /\.(ts|tsx)$/.test(file) && !/test|\.d\.ts$/.test(file))
     .filter((file) => /sessionStorage/.test(readFileSync(file, 'utf8')))
   expect(storageUsers.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/model/intentJournal.ts'])
+})
+it('sigue el tema elegido en el Host (data-theme), no prefers-color-scheme', () => {
+  expect(styles).not.toContain('prefers-color-scheme')
+  expect(styles).toContain(":root[data-theme='dark']")
 })
