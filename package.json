@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "write-excel-file": "4.1.1"
   },
   "devDependencies": {
     "@originjs/vite-plugin-federation": "^1.4.1",
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^4.1.11",
+    "exceljs": "4.4.0",
     "jsdom": "^29.1.1",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
