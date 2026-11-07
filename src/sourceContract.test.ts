@@ -28,7 +28,8 @@ it('el código de producción no embebe datos de venta, clientes ni productos', 
 })
 it('solo hay un cliente HTTP y ninguna dependencia nueva de transporte o router', () => {
   const manifest = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { dependencies: Record<string, string> }
-  expect(Object.keys(manifest.dependencies).sort()).toEqual(['react', 'react-dom'])
+  expect(Object.keys(manifest.dependencies).sort()).toEqual(['react', 'react-dom', 'write-excel-file'])
+  expect(manifest.dependencies['write-excel-file']).toBe('4.1.1')
   expect(source(/react-router|BrowserRouter|XMLHttpRequest|axios/)).toEqual([])
 })
 

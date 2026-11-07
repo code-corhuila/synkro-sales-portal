@@ -7,6 +7,7 @@ import { reportFailureMessage } from '../components/ReportStates'
 import { formatCents } from '../model/formatting'
 import { canReadReports, type ReportKind, type ReportRows } from '../model/report'
 import { countLabel, formatUtcDay, formatUtcMonth } from '../model/reportFormatting'
+import { DashboardTrend } from './DashboardTrend'
 import { useProductNames, useReport } from './useReport'
 import styles from './DashboardSummary.module.css'
 
@@ -36,6 +37,7 @@ export default function DashboardSummary() {
       }}</Tile>
       <Tile kind="top-products" title="Productos más vendidos" limit={3}>{(rows) => <TopList rows={rows as ReportRows['top-products'][]} />}</Tile>
     </div>
+    <DashboardTrend />
   </section>
 }
 
@@ -45,7 +47,7 @@ function TopList({ rows }: { rows: ReportRows['top-products'][] }) {
     <ul className={styles.list}>
       {rows.map((row) => <li key={row.productId} className={styles.item}>
         {names[row.productId] ? <span className={styles.itemName}>{names[row.productId]}</span> : null}
-        <span className={styles.itemId}>{row.productId}</span>
+        {!names[row.productId] && <span className={styles.itemId}>{row.productId}</span>}
         <span className={styles.detail}>{countLabel(row.totalQuantity, 'unidad', 'unidades')} · {formatCents(row.totalRevenueCents)}</span>
       </li>)}
     </ul>
