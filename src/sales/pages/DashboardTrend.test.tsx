@@ -34,15 +34,24 @@ beforeEach(() => {
 })
 
 describe('datos', () => {
-  it('dibuja un bar por fila del día y de los productos más vendidos, con su tabla reusada', async () => {
-    render(<DashboardTrend />)
+  it('dibuja un punto por día en la gráfica y una barra de ranking por producto, con sus tablas reusadas', async () => {
+    const { container } = render(<DashboardTrend />)
     const seriesTable = await screen.findByRole('table', { name: 'Totales diarios de ventas' })
     expect(within(seriesTable).getByText(/1\.234\.567,89/)).toBeVisible()
     const topTable = await screen.findByRole('table', { name: 'Productos más vendidos' })
     expect(await within(topTable).findByText('Teclado mecánico')).toBeVisible()
-    const charts = document.querySelectorAll('svg')
+    // Only the daily/monthly series stays an SVG chart; the product ranking is a horizontal list.
+    const charts = container.querySelectorAll('svg')
+    expect(charts).toHaveLength(1)
     expect(charts[0].querySelectorAll('rect')).toHaveLength(2)
-    expect(charts[1].querySelectorAll('rect')).toHaveLength(2)
+    expect(container.querySelectorAll('ol > li')).toHaveLength(2)
+  })
+  it('las tablas reusadas siguen accesibles de entrada (desplegables, pero abiertas por defecto)', async () => {
+    const { container } = render(<DashboardTrend />)
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    const disclosures = container.querySelectorAll('details')
+    expect(disclosures.length).toBeGreaterThanOrEqual(2)
+    for (const disclosure of disclosures) expect(disclosure).toHaveAttribute('open')
   })
   it('una sola página dice el total exacto, sin inventar que hay más', async () => {
     render(<DashboardTrend />)
@@ -109,6 +118,58 @@ describe('alternar diario/mensual', () => {
     expect(screen.getByLabelText('Desde')).toHaveValue('2026-10-01')
     expect(screen.getByRole('button', { name: 'Mensuales' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Diarios' })).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+describe('filtros rápidos', () => {
+  beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); vi.setSystemTime(new Date('2026-10-12T20:00:00Z')) })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('Hoy aplica el mismo día UTC como desde y hasta a las dos consultas', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<DashboardTrend />)
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    await user.click(screen.getByRole('button', { name: 'Hoy' }))
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    expect(calls('/daily').at(-1)?.[1]?.query).toEqual({ page: 1, limit: 20, from: '2026-10-12', to: '2026-10-12' })
+    expect(calls('/top-products').at(-1)?.[1]?.query).toEqual({ page: 1, limit: 5, from: '2026-10-12', to: '2026-10-12' })
+    expect(screen.getByRole('button', { name: 'Hoy' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Desde')).toHaveValue('2026-10-12')
+    expect(screen.getByLabelText('Hasta')).toHaveValue('2026-10-12')
+  })
+
+  it('7 días, 30 días y Este mes calculan el rango UTC inclusivo correcto', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<DashboardTrend />)
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    await user.click(screen.getByRole('button', { name: '7 días' }))
+    expect(calls('/daily').at(-1)?.[1]?.query).toMatchObject({ from: '2026-10-06', to: '2026-10-12' })
+    await user.click(screen.getByRole('button', { name: '30 días' }))
+    expect(calls('/daily').at(-1)?.[1]?.query).toMatchObject({ from: '2026-09-13', to: '2026-10-12' })
+    await user.click(screen.getByRole('button', { name: 'Este mes' }))
+    expect(calls('/daily').at(-1)?.[1]?.query).toMatchObject({ from: '2026-10-01', to: '2026-10-12' })
+    expect(screen.getByRole('button', { name: 'Este mes' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('Personalizado no llama a la API: solo lleva el foco al campo Desde', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<DashboardTrend />)
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    const before = reportCalls().length
+    await user.click(screen.getByRole('button', { name: 'Personalizado' }))
+    expect(screen.getByLabelText('Desde')).toHaveFocus()
+    expect(reportCalls()).toHaveLength(before)
+  })
+
+  it('marca Personalizado solo después de aplicar las fechas introducidas', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<DashboardTrend />)
+    await screen.findByRole('table', { name: 'Totales diarios de ventas' })
+    await user.type(screen.getByLabelText('Desde'), '2026-10-02')
+    expect(screen.getByRole('button', { name: 'Personalizado' })).toHaveAttribute('aria-pressed', 'false')
+    await user.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
+    expect(screen.getByRole('button', { name: 'Personalizado' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Hoy' })).toHaveAttribute('aria-pressed', 'false')
   })
 })
 
