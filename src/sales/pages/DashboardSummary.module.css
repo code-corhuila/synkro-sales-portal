@@ -12,4 +12,4 @@
 .itemId { color: var(--color-text-secondary); font-family: var(--font-family-mono); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
 .more { margin-top: auto; color: var(--color-secondary-action); font-weight: var(--font-weight-semibold); text-decoration: underline; text-underline-offset: 0.2em; }
 .summary :focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
-@media (prefers-color-scheme: dark) { .summary :focus-visible { outline-color: var(--color-primary-300); } }
+:root[data-theme='dark'] .summary :focus-visible { outline-color: var(--color-primary-300); }

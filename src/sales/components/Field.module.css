@@ -44,10 +44,8 @@
 }
 
 /* In the dark theme the field sits sunken in its card, on the page colour. */
-@media (prefers-color-scheme: dark) {
-  .field :is(input, select) {
-    background: var(--color-bg-page);
-  }
+:root[data-theme='dark'] .field :is(input, select) {
+  background: var(--color-bg-page);
 }
 
 .field :is(input, select)[aria-invalid='true'] {
