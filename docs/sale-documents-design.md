@@ -42,8 +42,8 @@ customer data and product/category names are the current ones. A file generated 
 say so (notice in the PDF; `origin="CURRENT_RECORD"` in the XML). This feature adds no snapshots and no migrations and
 does not claim immutability.
 
-A voided sale is exported as voided: the PDF carries a diagonal "ANULADA" stamp and the status "Anulada", the XML has
-`<status>VOIDED</status>`. It is never presented as active.
+When an authorized source supplies a voided model, the renderer exports it as voided: the PDF carries a diagonal "ANULADA" stamp and the status "Anulada", the XML has
+`<status>VOIDED</status>`. It is never presented as active. The selected Sales API currently returns404 for inactive sales and exposes no public void operation; end-to-end retrieval of an annulled sale is therefore not claimed.
 
 ## Common model and generation
 
@@ -146,7 +146,7 @@ line is a comment.
 * The PDF fonts cover Latin text only (other characters print as "?" in the PDF).
 * The bundled logo file has a watermark ("design.com") and a mint background; a clean asset should replace
   `src/sales/document/pdf/assets/synkro-logo.png`.
-* `pdf-lib` is unmaintained since 2022; it is pinned (1.17.1) and its JSDoc is stripped from the build because the compiled
+* `pdf-lib` is pinned (1.17.1); its JSDoc is stripped from the build because the compiled
   check rejects network-API words in comments.
 
 ## Verification record
