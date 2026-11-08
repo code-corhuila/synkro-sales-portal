@@ -2,77 +2,41 @@
 <saleDocument xmlns="urn:synkro:sales:sale-document:1.1" schemaVersion="1.1">
   <documentType>COMMERCIAL_RECEIPT</documentType>
   <fiscalValidity>NONE</fiscalValidity>
-  <saleId>550e8400-e29b-41d4-a716-446655440003</saleId>
+  <saleId>5d149845-ea18-4805-82ca-46de0b88e989</saleId>
   <status>ACTIVE</status>
-  <saleDate>2026-11-06T15:42:00Z</saleDate>
-  <generatedAt>2026-11-07T01:30:00Z</generatedAt>
+  <saleDate>2026-11-08T03:58:55.630Z</saleDate>
+  <generatedAt>2026-11-08T03:58:57.315Z</generatedAt>
   <currency minorUnitDigits="2">COP</currency>
   <issuer origin="CONFIGURATION">
-    <legalName>Comercializadora Prueba S.A.S.</legalName>
-    <taxId>800123456-7</taxId>
-    <address>Carrera 10 # 20-30, Neiva</address>
-    <phone>+57 608 871 2345</phone>
-    <email>ventas@prueba.test</email>
+    <legalName>VEN19 TEST FIXTURE</legalName>
+    <taxId>TEST-VEN19-NOT-FISCAL</taxId>
   </issuer>
   <customer origin="CURRENT_RECORD">
-    <customerId>550e8400-e29b-41d4-a716-446655440000</customerId>
-    <name>Ana Pérez</name>
-    <identityDocument>1075123456</identityDocument>
-    <address>Calle 1 # 2-3</address>
-    <phone>3100000000</phone>
-    <email>ana@correo.test</email>
+    <customerId>db36885d-b6a3-4109-b5c7-464d4e80e0ff</customerId>
+    <name>VEN19 Cliente ñ &amp; especial 792fdb0e</name>
+    <identityDocument>VEN19792fdb0e</identityDocument>
   </customer>
-  <lines count="5" unitCount="7">
+  <lines count="2" unitCount="4">
     <line position="1">
-      <productId>550e8400-e29b-41d4-a716-446655450000</productId>
+      <productId>01a1b94f-172f-7b1c-b2f2-cd47a2d4c0d7</productId>
       <product origin="CURRENT_RECORD">
-        <name>Portátil 14&quot; Ryzen 7 · 16 GB RAM · 512 GB SSD</name>
-        <category>Computadores</category>
+        <name>VEN19 0 portátil ñ &amp; &lt;especial&gt; descripción extensa descripción extensa descripción extensa descripción extensa</name>
+        <category>VEN19 792fdb0e</category>
       </product>
-      <quantity>1</quantity>
-      <unitPriceCents>357000000</unitPriceCents>
-      <subtotalCents>357000000</subtotalCents>
+      <quantity>2</quantity>
+      <unitPriceCents>12551</unitPriceCents>
+      <subtotalCents>25102</subtotalCents>
     </line>
     <line position="2">
-      <productId>550e8400-e29b-41d4-a716-446655450001</productId>
+      <productId>01a1b94f-180b-74c1-a919-a9c7cec0ecdc</productId>
       <product origin="CURRENT_RECORD">
-        <name>Monitor 27&quot; QHD IPS 75 Hz</name>
-        <category>Monitores</category>
+        <name>VEN19 1 portátil ñ &amp; &lt;especial&gt; descripción extensa descripción extensa descripción extensa descripción extensa</name>
+        <category>VEN19 792fdb0e</category>
       </product>
       <quantity>2</quantity>
-      <unitPriceCents>107100050</unitPriceCents>
-      <subtotalCents>214200100</subtotalCents>
-    </line>
-    <line position="3">
-      <productId>550e8400-e29b-41d4-a716-446655450002</productId>
-      <product origin="CURRENT_RECORD">
-        <name>Teclado mecánico inalámbrico</name>
-        <category>Periféricos</category>
-      </product>
-      <quantity>1</quantity>
-      <unitPriceCents>29750099</unitPriceCents>
-      <subtotalCents>29750099</subtotalCents>
-    </line>
-    <line position="4">
-      <productId>550e8400-e29b-41d4-a716-446655450003</productId>
-      <product origin="CURRENT_RECORD">
-        <name>Mouse ergonómico inalámbrico</name>
-        <category>Periféricos</category>
-      </product>
-      <quantity>2</quantity>
-      <unitPriceCents>11900007</unitPriceCents>
-      <subtotalCents>23800014</subtotalCents>
-    </line>
-    <line position="5">
-      <productId>550e8400-e29b-41d4-a716-446655450004</productId>
-      <product origin="CURRENT_RECORD">
-        <name>Base refrigerante para portátil</name>
-        <category>Accesorios</category>
-      </product>
-      <quantity>1</quantity>
-      <unitPriceCents>9520000</unitPriceCents>
-      <subtotalCents>9520000</subtotalCents>
+      <unitPriceCents>12552</unitPriceCents>
+      <subtotalCents>25104</subtotalCents>
     </line>
   </lines>
-  <totalCents>634270213</totalCents>
+  <totalCents>50206</totalCents>
 </saleDocument>
