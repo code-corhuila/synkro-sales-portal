@@ -14,7 +14,7 @@ Status (2026-11-07): implemented and verified with unit, component, integration-
 |---|---|---|
 | **VEN19-01** an authorized user downloads PDF and XML of the same sale; data and amounts match the persisted detail | `SaleDocumentDownloads` (buttons) → `useSaleDocumentDownload` → `prepareSaleDocument` → `loadSaleDocumentSources` + `buildSaleDocument` → `renderSaleDocument` (`buildSaleDocumentPdf` / `buildSaleDocumentXml`) → `downloadBlob` | `saleDocumentConsistency.test.ts` (PDF text read back with pdf.js and XML compared with the persisted sale, 45 lines, several pages), `buildSaleDocument.test.ts`, `saleDocumentXml.test.ts`, `SaleDocumentDownloads.test.tsx` (descarga), `SaleDetailPage.documents.test.tsx`, `downloadBlob.test.ts`; browser run below |
 | **VEN19-02** a nonexistent or unauthorized sale gives the matching result without exposing another account's data; a generation failure offers retry | `saleDocumentApi` (401/403/404/other translation), `SaleDocumentError`, the status and alert region of `SaleDocumentDownloads` | `saleDocumentApi.test.ts` (autorización y errores; no partial result after the first failure), `SaleDocumentDownloads.test.tsx` (errores y reintento, respuestas obsoletas y limpieza), `renderSaleDocument.test.ts`, `documentSource.test.ts` |
-| **VEN19-03** the approved SynkroTech layout handles long and multiline documents and special characters; the XML validates against the agreed schema | `pdf/buildSaleDocumentPdf.ts`, `pdf/assets.ts`, `pdf/format.ts`, `text.ts`, `saleDocumentXml.ts`, `docs/schemas/sale-document-1.0.xsd` | `pdf/saleDocumentPdf.test.ts` (one page, long documents, special characters, logo; selectable text, accents/ñ, pagination, repeating header, page numbers, no overlap), `saleDocumentXml.test.ts` (validated against the XSD with xmllint-wasm; escaping), the rendered samples in [docs/examples/sale-document](examples/sale-document) |
+| **VEN19-03** the approved SynkroTech layout handles long and multiline documents and special characters; the XML validates against the agreed schema | `pdf/buildSaleDocumentPdf.ts`, `pdf/assets.ts`, `pdf/format.ts`, `text.ts`, `saleDocumentXml.ts`, `docs/schemas/sale-document-1.1.xsd` | `pdf/saleDocumentPdf.test.ts` (one page, long documents, special characters, logo; selectable text, accents/ñ, pagination, repeating header, page numbers, no overlap), `saleDocumentXml.test.ts` (validated against the XSD with xmllint-wasm; escaping), the rendered samples in [docs/examples/sale-document](examples/sale-document) |
 | **VEN19-04** fiscal requirements and limitations are recorded and verified before any compliance claim | the fixed notice printed in the PDF, `documentType=COMMERCIAL_RECEIPT` and `fiscalValidity=NONE` in the XML | `saleDocumentPdf.test.ts` and `saleDocumentXml.test.ts` assert the notice and `NONE`, and that the files contain no CUFE, QR, resolution, signature or tax breakdown; this document |
 
 ## Where every field comes from
@@ -25,12 +25,14 @@ Nothing is repriced and nothing is invented. Four kinds of origin, kept apart in
 |---|---|---|
 | Full `saleId`, sale date, status (active/voided), `createdBy` is **not** printed | **Persisted history** — `GET /api/v1/sales/{id}` | ADMIN reads any sale, SALESPERSON only their own, INVENTORY gets 403. The Host client and session are reused; the portal adds no permission. |
 | Lines: product id, quantity, unit price in cents, subtotal in cents; total in cents | **Persisted history** — same response | Integer cents (COP, 2 digits), formatted only for display. Never recomputed from the catalogue. |
-| Customer name, document, address, phone, email | **Current data from another service** — `GET /api/v1/customers/{id}` | The customers service answers 404 for an inactive customer, so a sale of an inactive customer cannot be exported (explicit error, no partial file). Optional fields are omitted when absent. |
-| Product name and category | **Current data from another service** — `GET /api/v1/products/{id}` and the paginated categories list | An inactive product is visible only to ADMIN/INVENTORY; a SALESPERSON export that needs one fails explicitly. The category exists only in the paginated list; a line is rendered without category if it is not found. |
-| Issuer legal name, NIT, address, phone, email | **Issuer configuration** — build-time `VITE_ISSUER_*` | No default. See [Issuer configuration](#issuer-configuration). |
+| Customer name, document, address, phone, email | **Current data from another service** — `GET /api/v1/customers/{id}` | "Document" is the contract's one `identityDocument` field (whatever the customer record stores — cédula or NIT — as free text); there is no separately typed or validated fiscal NIT, see the row below. The customers service answers 404 for an inactive customer, so its current fields are omitted and an explicit unavailable reference is exported under the owner-approved policy. Optional fields are omitted when absent. |
+| Product name and category | **Current data from another service** — `GET /api/v1/products/{id}` and the paginated categories list | An inactive product is visible only to ADMIN/INVENTORY; SALESPERSON exports its persisted productId and an unavailable marker instead of hidden current data. The category exists only in the paginated list; a line is rendered without category if it is not found. |
+| Issuer legal name, NIT, address, phone, email | **Issuer configuration** — build-time `VITE_ISSUER_*` | Owner-confirmed public deployment defaults, overridable at build time. See [Issuer configuration](#issuer-configuration). |
 | Generation instant | The browser clock at export time | Shown in Bogotá time; the sale date is also shown in Bogotá time. The XML carries UTC instants. |
-| Seller name | **Does not exist for this role** | `createdBy` is an id; the name needs the ADMIN-only `/auth/users/{id}`. It is omitted, not guessed. |
-| Consecutive/invoice number, SKU, unit of measure, taxes (no 19 % IVA), payment method, seller, customer NIT, resolution, CUFE, QR | **Do not exist in any contract** | Not printed and not in the XML. The values of the HTML reference (`factura-opcion-a.html`) were demo content and are not domain requirements. |
+| Seller name | **Unavailable to this role, not nonexistent** | `createdBy` is an id; the name needs the ADMIN-only `/auth/users/{id}`, which this feature does not call. The data exists; this feature does not have access to it. It is omitted, not guessed. |
+| A separately typed/validated customer NIT | **Not a distinct field** | The Customers contract has no fiscal NIT type, verification digit or taxpayer classification separate from `identityDocument` (above). The document does not invent a second "NIT" value. |
+| "Valor en letras" (amount written out in words) | **Not an API field; a derived display convention** | Writing an amount in words is computed from `totalCents`, not read from any service. It was never a contract requirement either way; this document does not implement it. |
+| Consecutive/invoice number, SKU, unit of measure, taxes (no 19 % IVA), payment method, resolution, CUFE, QR | **Do not exist in any contract** | Not printed and not in the XML. The values of the HTML reference (`factura-opcion-a.html`) were demo content and are not domain requirements. |
 
 ### What the downloaded file does not freeze
 
@@ -74,15 +76,20 @@ page 2 a compact header and the table header repeat; the footer carries the sale
 commercial-scope notice sits under the total and moves to the next page if it would not fit. Text is real, selectable
 text, with accents and ñ.
 
-Adaptations to the HTML reference: no consecutive number, NIT of the customer, SKU, tax column, payment method, "valor en
-letras" or seller (none exist); the title is "Comprobante de venta"; the notice about scope is added; the status stamp is
-added for voided sales. Glyph coverage is that of the bundled fonts (Latin); a character outside it is drawn as "?" in the
-PDF so the layout never breaks, while the XML keeps the exact text.
+Adaptations to the HTML reference: no consecutive number, SKU, tax column or payment method — none exist in any contract.
+No separate "NIT del cliente" field: the customer's `identityDocument` is already printed in the customer block (see
+[Where every field comes from](#where-every-field-comes-from)); this layout does not duplicate it under a NIT label, and
+does not type or validate it as a fiscal NIT. No "valor en letras": writing the total in words is a derived display
+convention, not an API field either present or absent, and it was not implemented. No seller name: that data exists
+(`createdBy` resolved through the ADMIN-only `/auth/users/{id}`) but this feature does not call that endpoint, so the name
+is unavailable here, not nonexistent. The title is "Comprobante de venta"; the notice about scope is added; the status
+stamp is added for voided sales. Glyph coverage is that of the bundled fonts (Latin); a character outside it is drawn as
+"?" in the PDF so the layout never breaks, while the XML keeps the exact text.
 
 ### XML
 
-Namespace `urn:synkro:sales:sale-document:1.0`, `schemaVersion="1.0"`, schema in
-[`docs/schemas/sale-document-1.0.xsd`](schemas/sale-document-1.0.xsd). It is a Synkro document, not UBL or DIAN:
+Namespace `urn:synkro:sales:sale-document:1.1`, `schemaVersion="1.1"`, schema in
+[`docs/schemas/sale-document-1.1.xsd`](schemas/sale-document-1.1.xsd). It is a Synkro document, not UBL or DIAN:
 `documentType=COMMERCIAL_RECEIPT`, `fiscalValidity=NONE`. Amounts are integer minor units (`unitPriceCents`,
 `subtotalCents`, `totalCents`) with `<currency minorUnitDigits="2">COP</currency>`. Instants are UTC. Every text first goes
 through `sanitizeText` (characters not allowed by XML 1.0 become U+FFFD) and is then escaped by `escapeXml` for text and
@@ -117,8 +124,8 @@ claim are used. This portal makes none.
 
 ## Issuer configuration
 
-The issuer is explicit build configuration with no defaults; without it the downloads refuse to generate and say which
-variables are missing. The user must supply:
+The issuer is public build configuration with owner-confirmed deployment defaults (synkro tech sas, NIT 803.256.942-7); without it the downloads refuse to generate and say which
+variables are missing. Docker/Compose and .env.example carry these confirmed values; an explicit empty override still refuses generation. Direct npm builds must load .env using the existing setup:
 
 | Variable | Required | Notes |
 |---|---|---|
@@ -133,9 +140,9 @@ line is a comment.
 
 ## Known limits
 
-* A SALESPERSON cannot export a sale whose customer is inactive or that includes an inactive product (the owning services
-  hide them); the error says the data is unavailable. ADMIN has the same limit for inactive customers.
-* No seller name; no category when the list does not return it; no historical snapshot (see above).
+* A related-record404 is represented explicitly by its persisted reference and an unavailable marker, never by a guessed name or an alternate privileged lookup. It does not prove whether the record was deleted, hidden or inactive. Other failures still stop generation.
+* No seller name (unavailable to this feature, see [Where every field comes from](#where-every-field-comes-from), not
+  nonexistent data); no category when the list does not return it; no historical snapshot (see above).
 * The PDF fonts cover Latin text only (other characters print as "?" in the PDF).
 * The bundled logo file has a watermark ("design.com") and a mint background; a clean asset should replace
   `src/sales/document/pdf/assets/synkro-logo.png`.
@@ -149,7 +156,7 @@ were nevertheless written before the production code: the first run of the new t
 implementation failed (10 of 12 new files could not load their modules, 3 tests failed, 9 existing/ancillary tests
 passed), the following runs went down to the last failing assertion and then to green.
 
-Node 22.23.4 (not 25). Results of the final run on this branch:
+Original implementation record (Node22.23.4); superseded by the completion verification below:
 
 * `npm run test -- --coverage`: 46 files, 482 tests passed (baseline before this work: 35 files, 348 tests), twice in a row.
   Coverage: all files 96.88 % statements, 93.76 % branches, 99.5 % functions, 99.39 % lines; `src/sales/document` 95.94 %,
@@ -190,3 +197,21 @@ To run it:
    own sale. As the owner SALESPERSON: open the other one's sale by URL and try the download — expect 403 and no data.
 4. Compare each file with `GET /api/v1/sales/{id}` (id, date, status, quantities, cents, total) and with the customer and
    product reads; check the XML against the XSD and the PDF visually. Record the result here; only then tick criteria.
+
+## Owner-approved completion design (2026-11-07)
+
+Before implementing this follow-up, the owner selected reference-only exports when related current records
+are unavailable, and confirmed the public issuer values above. Only a real404 from an authorized related-record
+request becomes null. Sales itself must be authorized first; a sale401/403/404 stops before related reads.
+A related401/403/429/5xx, network failure, wrong-identity response or malformed successful record still fails closed.
+No role escalation, catalogue scan, backend contract change, migration or historical snapshot was introduced.
+
+In both formats, historical identifiers, amounts and quantities remain complete. PDF shows the persisted
+customer/product reference with “Datos actuales no disponibles”. XML1.1 uses origin="UNAVAILABLE" and an
+unavailable element instead of inventing a name or identityDocument. Available records retain CURRENT_RECORD.
+The XML declaration remains XML1.0; only the commercial schema/namespace is1.1. The earlier1.0 XSD is retained
+as a historical schema, not the newly generated format. Missing current metadata is explicit, never silent.
+
+A behavioral RED regression reproduced the original404 export failure before this follow-up was applied.
+Identity mismatch and malformed active-flag checks from Claude were reviewed and are verified alongside it.
+The original late-design process note above remains accurate for the initial implementation.

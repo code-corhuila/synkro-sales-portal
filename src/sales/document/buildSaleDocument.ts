@@ -9,8 +9,8 @@ import {
 
 export interface SaleDocumentInput {
   sale: Sale
-  customer: Customer
-  products: Record<string, Product>
+  customer: Customer | null
+  products: Record<string, Product | null>
   // categoryId -> current category name; an unknown category is simply not printed.
   categories: Record<string, string>
   issuer: SaleDocumentIssuer
@@ -28,7 +28,7 @@ export function toInstant(value: string): string | null {
 // Builds the one model both files are derived from. Amounts, quantities, date and status are the ones
 // persisted in Sales: nothing is repriced from the catalogue and nothing is recomputed except the check
 // that the stored subtotals and total are internally consistent. Anything missing or inconsistent stops
-// the export with an explicit error; there is no partial document.
+// the export with an explicit error. A related-record404 retains its persisted reference and an explicit marker.
 export function buildSaleDocument({ sale, customer, products, categories, issuer, now }: SaleDocumentInput): SaleDocument {
   const invalid: string[] = []
   const saleDate = toInstant(sale.date)
@@ -50,37 +50,41 @@ export function buildSaleDocument({ sale, customer, products, categories, issuer
     if (Number.isSafeInteger(line.quantity)) units += line.quantity
   })
   if (!isAmount(sale.totalCents) || BigInt(sale.totalCents) !== sum) invalid.push('totalCents')
-  if (sale.customerId !== customer.customerId) invalid.push('customerId')
+  // Strict boolean, not truthiness: a malformed or ambiguous value (a string, a number, null) must
+  // stop the export instead of silently becoming ACTIVE or VOIDED by coercion.
+  if (typeof sale.active !== 'boolean') invalid.push('active')
+  if (customer !== null && sale.customerId !== customer.customerId) invalid.push('customerId')
   if (invalid.length) throw new SaleDocumentError('INVALID_SALE', 'La venta tiene datos inconsistentes.', { details: invalid })
 
-  const customerName = sanitizeText(customer.name ?? '')
-  const identityDocument = sanitizeText(customer.identityDocument ?? '')
-  if (!customerName || !identityDocument) {
-    throw new SaleDocumentError('CUSTOMER_UNAVAILABLE', 'Faltan el nombre o el documento del cliente.', { details: [customer.customerId] })
+  const customerName = customer === null ? 'Datos actuales no disponibles' : sanitizeText(customer.name ?? '')
+  const identityDocument = customer === null ? '' : sanitizeText(customer.identityDocument ?? '')
+  if (!customerName || (customer !== null && !identityDocument)) {
+    throw new SaleDocumentError('CUSTOMER_UNAVAILABLE', 'Faltan el nombre o el documento del cliente.', { details: [sale.customerId] })
   }
 
-  const unavailable = [...new Set(details.filter((line) => !sanitizeText(products[line.productId]?.name ?? '')).map((line) => line.productId))]
+  const unavailable = [...new Set(details.filter((line) => products[line.productId] !== null && !sanitizeText(products[line.productId]?.name ?? '')).map((line) => line.productId))]
   if (unavailable.length) throw new SaleDocumentError('PRODUCT_UNAVAILABLE', 'Falta el nombre de uno o más productos.', { details: unavailable })
 
   const lines: SaleDocumentLine[] = details.map((line, index) => {
     const product = products[line.productId]
-    const category = optionalText(categories[product.categoryId])
+    const category = product === null ? 'Datos actuales no disponibles' : optionalText(categories[product.categoryId])
     return {
       position: index + 1,
       productId: line.productId,
-      productName: sanitizeText(product.name),
+      productName: product === null ? `Referencia ${line.productId}` : sanitizeText(product.name),
+      ...(product === null ? { currentRecordAvailable: false } : {}),
       ...(category ? { categoryName: category } : {}),
       quantity: line.quantity,
       unitPriceCents: line.unitPriceCents,
       subtotalCents: line.subtotalCents,
     }
   })
-  const address = optionalText(customer.address)
-  const phone = optionalText(customer.phone)
-  const email = optionalText(customer.email)
+  const address = optionalText(customer?.address)
+  const phone = optionalText(customer?.phone)
+  const email = optionalText(customer?.email)
 
   return {
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     documentType: 'COMMERCIAL_RECEIPT',
     saleId: sale.saleId,
     status: sale.active ? 'ACTIVE' : 'VOIDED',
@@ -89,7 +93,8 @@ export function buildSaleDocument({ sale, customer, products, categories, issuer
     currency: 'COP',
     issuer,
     customer: {
-      customerId: customer.customerId, name: customerName, identityDocument,
+      customerId: sale.customerId, name: customerName, identityDocument,
+      ...(customer === null ? { currentRecordAvailable: false } : {}),
       ...(address ? { address } : {}), ...(phone ? { phone } : {}), ...(email ? { email } : {}),
     },
     lines,
