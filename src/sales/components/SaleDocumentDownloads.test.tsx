@@ -232,20 +232,30 @@ describe('errores y reintento', () => {
     expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
   })
 
-  it('cliente o producto no disponibles: explica el límite sin generar un archivo parcial', async () => {
-    serve({ customer: () => Promise.reject(failure(404, 'NOT_FOUND')) })
+  it('cliente con respuesta malformada: falla sin ocultar la inconsistencia', async () => {
+    serve({ customer: () => Promise.resolve(customerFixture({ name: '' })) })
     render(<SaleDocumentDownloads saleId={ids.sale} />)
     await userEvent.setup().click(pdf())
     expect(await screen.findByRole('alert')).toHaveTextContent('datos del cliente')
     expect(save).not.toHaveBeenCalled()
   })
 
-  it('producto no disponible para el rol', async () => {
-    serve({ product: () => Promise.reject(failure(404, 'NOT_FOUND')) })
+  it('producto con respuesta malformada: falla sin inventar su nombre', async () => {
+    serve({ product: () => Promise.resolve(productFixture({ name: '' })) })
     render(<SaleDocumentDownloads saleId={ids.sale} />)
     await userEvent.setup().click(pdf())
     expect(await screen.findByRole('alert')).toHaveTextContent('productos')
     expect(save).not.toHaveBeenCalled()
+  })
+
+  it.each(['customer', 'product'] as const)('un404 de %s permite descargar con procedencia no disponible explícita', async subject => {
+    serve({ [subject]: () => Promise.reject(failure(404)) })
+    render(<SaleDocumentDownloads saleId={ids.sale} />)
+    await userEvent.setup().click(xml())
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+    const model = render_.mock.calls[0][1]
+    expect(subject === 'customer' ? model.customer.currentRecordAvailable : model.lines[0].currentRecordAvailable).toBe(false)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('venta con datos inconsistentes: falla explícitamente', async () => {

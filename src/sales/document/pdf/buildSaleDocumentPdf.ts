@@ -231,7 +231,9 @@ export async function buildSaleDocumentPdf(model: SaleDocument): Promise<Uint8Ar
     ]
     const contactLine = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ') || undefined
     const issuerRows = rows('EMISOR', model.issuer.legalName, 'NIT', model.issuer.taxId, [model.issuer.address, contactLine(model.issuer.phone, model.issuer.email)])
-    const customerRows = rows('CLIENTE', model.customer.name, 'Documento', model.customer.identityDocument, [model.customer.address, contactLine(model.customer.phone, model.customer.email)])
+    const customerRows = model.customer.currentRecordAvailable === false
+      ? rows('CLIENTE', 'Datos actuales no disponibles', 'Referencia', model.customer.customerId, [])
+      : rows('CLIENTE', model.customer.name, 'Documento', model.customer.identityDocument, [model.customer.address, contactLine(model.customer.phone, model.customer.email)])
     const heightOf = (list: Row[]) => px(16) * 2 + list.reduce((sum, row) => sum + row.lineHeight, 0) + (list.length - 1) * 3
     const height = Math.max(heightOf(issuerRows), heightOf(customerRows))
     const draw = (list: Row[], x: number, background: boolean) => {

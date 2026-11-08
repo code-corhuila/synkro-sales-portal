@@ -19,8 +19,8 @@ const MAX_CATEGORY_PAGES = 10
 
 export interface SaleDocumentSources {
   sale: Sale
-  customer: Customer
-  products: Record<string, Product>
+  customer: Customer | null
+  products: Record<string, Product | null>
   categories: Record<string, string>
 }
 
@@ -42,6 +42,16 @@ function translate(error: unknown, subject: Subject, id?: string): SaleDocumentE
     if (subject === 'product') return new SaleDocumentError('PRODUCT_UNAVAILABLE', 'Un producto no está disponible.', { details: id ? [id] : [], traceId })
   }
   return new SaleDocumentError('TRANSPORT', 'No se pudo leer la información de la venta.', { traceId })
+}
+
+// Only an actual related-record404 can become an explicitly unavailable reference.
+// Session/access failures, transport errors and malformed successful records still fail closed.
+async function currentRecord<T>(work: () => Promise<T>): Promise<T | null> {
+  try { return await work() }
+  catch (error) {
+    if ((error as SharedError | null)?.status === 404) return null
+    throw error
+  }
 }
 
 async function readCategories(signal: AbortSignal | undefined): Promise<Record<string, string>> {
@@ -75,14 +85,23 @@ export async function loadSaleDocumentSources(saleId: string, { signal }: { sign
   const sale = await guarded('sale', () => getSale(saleId, { signal }))
   if (sale.saleId.toLowerCase() !== saleId.toLowerCase()) throw new SaleDocumentError('INVALID_SALE', 'La respuesta no corresponde a la venta pedida.')
 
-  let customer!: Customer
+  let customer!: Customer | null
   let categories: Record<string, string> = {}
-  const products: Record<string, Product> = {}
+  const products: Record<string, Product | null> = {}
   const tasks: (() => Promise<void>)[] = [
-    async () => { customer = await guarded('customer', () => getCustomer(sale.customerId, { signal })) },
+    async () => { customer = await guarded('customer', () => currentRecord(() => getCustomer(sale.customerId, { signal }))) },
     async () => { categories = await guarded('categories', () => readCategories(signal)) },
     ...[...new Set((sale.details ?? []).map((line) => line.productId))].map((productId) => async () => {
-      products[productId] = await guarded('product', () => getProduct(productId, { signal }), productId)
+      products[productId] = await guarded('product', async () => {
+        const product = await currentRecord(() => getProduct(productId, { signal }))
+        if (product === null) return null
+        // The dictionary is keyed by the requested id; without this check a server/double that answers
+        // the wrong product for it would silently lend that product's name to the requested id's line.
+        if (product.productId.toLowerCase() !== productId.toLowerCase()) {
+          throw new SaleDocumentError('PRODUCT_UNAVAILABLE', 'La respuesta no corresponde al producto pedido.', { details: [productId] })
+        }
+        return product
+      }, productId)
     }),
   ]
   await runPool(tasks, MAX_SOURCE_CONCURRENCY)

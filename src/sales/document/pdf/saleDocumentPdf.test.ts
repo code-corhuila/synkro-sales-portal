@@ -23,6 +23,21 @@ function generate(document: SaleDocument) {
 }
 const render = async (document: SaleDocument) => (await generate(document)).read
 
+it('marca los datos actuales no disponibles y conserva referencias e importes históricos', async () => {
+  const model = documentFixture()
+  model.customer = { ...model.customer, currentRecordAvailable: false }
+  model.lines = model.lines.map(line => ({ ...line, currentRecordAvailable: false,
+    productName: `Referencia ${line.productId}`, categoryName: 'Datos actuales no disponibles' }))
+  const { pages } = await render(model)
+  const text = squash(pages.map(page => page.text).join(' '))
+  expect(text).toContain('Datos actuales no disponibles')
+  expect(text).toContain(model.customer.customerId)
+  expect(text).toContain(model.lines[0].productId)
+  expect(text).toContain(money(model.totalCents))
+  expect(text).not.toContain('Ana Pérez')
+  expect(text).not.toContain(model.customer.identityDocument)
+})
+
 function lines(count: number, name = (index: number) => `Producto de catálogo número ${index + 1} con una descripción larga para que ocupe más de una línea en la tabla`): { lines: SaleDocumentLine[]; totalCents: number; unitCount: number } {
   const built = Array.from({ length: count }, (_, index) => {
     const quantity = (index % 5) + 1

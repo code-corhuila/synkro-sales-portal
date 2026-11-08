@@ -16,6 +16,7 @@ export interface SaleDocumentIssuer {
 }
 
 export interface SaleDocumentCustomer {
+  currentRecordAvailable?: boolean
   customerId: string
   name: string
   identityDocument: string
@@ -25,6 +26,7 @@ export interface SaleDocumentCustomer {
 }
 
 export interface SaleDocumentLine {
+  currentRecordAvailable?: boolean
   position: number
   productId: string
   productName: string
@@ -35,7 +37,7 @@ export interface SaleDocumentLine {
 }
 
 export interface SaleDocument {
-  schemaVersion: '1.0'
+  schemaVersion: '1.1'
   documentType: 'COMMERCIAL_RECEIPT'
   saleId: string
   status: SaleDocumentStatus

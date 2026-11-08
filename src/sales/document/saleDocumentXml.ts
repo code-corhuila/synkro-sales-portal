@@ -2,8 +2,8 @@ import { assertRenderable } from './assertRenderable'
 import { sanitizeText } from './text'
 import type { SaleDocument } from './types'
 
-// Commercial XML, schema version 1.0 (docs/schemas/sale-document-1.0.xsd). It is not a fiscal document.
-export const SALE_DOCUMENT_NAMESPACE = 'urn:synkro:sales:sale-document:1.0'
+// Commercial XML, schema version 1.1 (docs/schemas/sale-document-1.1.xsd). It is not a fiscal document.
+export const SALE_DOCUMENT_NAMESPACE = 'urn:synkro:sales:sale-document:1.1'
 
 // All text goes through the same sanitizer as the PDF (characters XML 1.0 cannot carry become U+FFFD) and is
 // then escaped for both text and attribute positions. Nothing is concatenated without passing through here.
@@ -22,9 +22,10 @@ export function buildSaleDocumentXml(document: SaleDocument): string {
   const lines = document.lines.flatMap((line) => [
     `    <line position="${integer(line.position)}">`,
     element(3, 'productId', line.productId),
-    '      <product origin="CURRENT_RECORD">',
-    element(4, 'name', line.productName),
-    ...optional(4, 'category', line.categoryName),
+    `      <product origin="${line.currentRecordAvailable === false ? 'UNAVAILABLE' : 'CURRENT_RECORD'}">`,
+    ...(line.currentRecordAvailable === false
+      ? [element(4, 'unavailable', 'Datos actuales no disponibles')]
+      : [element(4, 'name', line.productName), ...optional(4, 'category', line.categoryName)]),
     '      </product>',
     element(3, 'quantity', integer(line.quantity)),
     element(3, 'unitPriceCents', integer(line.unitPriceCents)),
@@ -48,13 +49,13 @@ export function buildSaleDocumentXml(document: SaleDocument): string {
     ...optional(2, 'phone', issuer.phone),
     ...optional(2, 'email', issuer.email),
     '  </issuer>',
-    '  <customer origin="CURRENT_RECORD">',
+    `  <customer origin="${customer.currentRecordAvailable === false ? 'UNAVAILABLE' : 'CURRENT_RECORD'}">`,
     element(2, 'customerId', customer.customerId),
-    element(2, 'name', customer.name),
-    element(2, 'identityDocument', customer.identityDocument),
-    ...optional(2, 'address', customer.address),
-    ...optional(2, 'phone', customer.phone),
-    ...optional(2, 'email', customer.email),
+    ...(customer.currentRecordAvailable === false
+      ? [element(2, 'unavailable', 'Datos actuales no disponibles')]
+      : [element(2, 'name', customer.name), element(2, 'identityDocument', customer.identityDocument),
+        ...optional(2, 'address', customer.address), ...optional(2, 'phone', customer.phone),
+        ...optional(2, 'email', customer.email)]),
     '  </customer>',
     `  <lines count="${integer(document.lines.length)}" unitCount="${integer(document.unitCount)}">`,
     ...lines,
