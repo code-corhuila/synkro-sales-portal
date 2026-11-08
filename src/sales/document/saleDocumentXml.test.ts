@@ -6,8 +6,8 @@ import { documentFixture, productIdOf } from '../../test-doubles/saleDocument'
 import { buildSaleDocumentXml, SALE_DOCUMENT_NAMESPACE } from './saleDocumentXml'
 import type { SaleDocument } from './types'
 
-const schema = readFileSync(resolve('docs/schemas/sale-document-1.0.xsd'), 'utf8')
-const validate = (xml: string) => validateXML({ xml: [{ fileName: 'document.xml', contents: xml }], schema: [{ fileName: 'sale-document-1.0.xsd', contents: schema }] })
+const schema = readFileSync(resolve('docs/schemas/sale-document-1.1.xsd'), 'utf8')
+const validate = (xml: string) => validateXML({ xml: [{ fileName: 'document.xml', contents: xml }], schema: [{ fileName: 'sale-document-1.1.xsd', contents: schema }] })
 const parse = (xml: string) => new DOMParser().parseFromString(xml, 'application/xml')
 const text = (root: ParentNode, selector: string) => root.querySelector(selector)?.textContent ?? null
 
@@ -37,7 +37,7 @@ it('declara el espacio de nombres y la versión del esquema', () => {
   const root = parse(buildSaleDocumentXml(documentFixture())).documentElement
   expect(root.localName).toBe('saleDocument')
   expect(root.namespaceURI).toBe(SALE_DOCUMENT_NAMESPACE)
-  expect(root.getAttribute('schemaVersion')).toBe('1.0')
+  expect(root.getAttribute('schemaVersion')).toBe('1.1')
 })
 
 it('aclara en el propio archivo que es un comprobante comercial sin validez fiscal', () => {

@@ -38,7 +38,7 @@ beforeEach(() => serve())
 it('lee la venta autoritativa, el cliente, cada producto distinto y las categorías, solo con GET', async () => {
   const sources = await loadSaleDocumentSources(ids.sale)
   expect(sources.sale.saleId).toBe(ids.sale)
-  expect(sources.customer.name).toBe('Ana Pérez')
+  expect(sources.customer?.name).toBe('Ana Pérez')
   expect(Object.keys(sources.products)).toEqual([ids.productA])
   expect(sources.categories).toEqual({ [ids.category]: 'Periféricos' })
   expect(paths().sort()).toEqual([
@@ -115,14 +115,18 @@ describe('autorización y errores', () => {
     expect((await failureOf(loadSaleDocumentSources(ids.sale))).code).toBe('TRANSPORT')
   })
 
-  it('un cliente que ya no está disponible (404) no se sustituye por su identificador', async () => {
+  it('un cliente no disponible (404) conserva una ausencia explícita para el comprobante por referencia', async () => {
     serve({ customer: () => Promise.reject(failure(404, 'NOT_FOUND')) })
-    const error = await failureOf(loadSaleDocumentSources(ids.sale))
-    expect(error.code).toBe('CUSTOMER_UNAVAILABLE')
+    expect((await loadSaleDocumentSources(ids.sale)).customer).toBeNull()
   })
 
-  it('un producto que el rol no puede leer (404) falla indicando cuál', async () => {
+  it('un producto oculto (404) conserva la referencia sin revelar datos actuales', async () => {
     serve({ product: () => Promise.reject(failure(404, 'NOT_FOUND')) })
+    expect((await loadSaleDocumentSources(ids.sale)).products[ids.productA]).toBeNull()
+  })
+
+  it('rechaza un producto cuya respuesta trae un productId distinto del pedido', async () => {
+    serve({ product: () => Promise.resolve(productFixture({ productId: ids.productB })) })
     const error = await failureOf(loadSaleDocumentSources(ids.sale))
     expect(error.code).toBe('PRODUCT_UNAVAILABLE')
     expect(error.details).toEqual([ids.productA])

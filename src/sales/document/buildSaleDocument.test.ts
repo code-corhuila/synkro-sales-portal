@@ -33,7 +33,7 @@ it('usa el saleId completo como identificador y distingue la fecha de venta de l
   expect(document.saleId).toBe(ids.sale)
   expect(document.saleDate).toBe('2026-10-12T15:00:02Z')
   expect(document.generatedAt).toBe('2026-11-07T01:30:00Z')
-  expect(document.schemaVersion).toBe('1.0')
+  expect(document.schemaVersion).toBe('1.1')
   expect(document.documentType).toBe('COMMERCIAL_RECEIPT')
   expect(document.currency).toBe('COP')
 })
@@ -120,6 +120,14 @@ describe('falla de forma explícita, sin producir un documento parcial', () => {
   it('rechaza un detalle inactivo en lugar de presentarlo como activo', () => {
     const broken = { ...sale, details: [{ ...sale.details[0], active: false }, sale.details[1]] }
     expect(failureOf({ ...base, sale: broken }).code).toBe('INVALID_SALE')
+  })
+  it('rechaza un indicador active ambiguo o no booleano en vez de interpretarlo por veracidad', () => {
+    for (const active of ['false', 'true', 0, 1, null, undefined, 'ACTIVE', {}, []]) {
+      const broken = { ...sale, active } as unknown as typeof sale
+      const error = failureOf({ ...base, sale: broken })
+      expect(error.code).toBe('INVALID_SALE')
+      expect(error.details).toContain('active')
+    }
   })
   it('rechaza un cliente que no corresponde a la venta', () => {
     expect(failureOf({ ...base, customer: customerFixture({ customerId: ids.productA }) }).code).toBe('INVALID_SALE')

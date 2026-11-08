@@ -16,11 +16,11 @@ ENV VITE_BASE_PATH=$VITE_BASE_PATH
 ARG VITE_SHELL_ENTRY_URL=http://localhost:5173/assets/remoteEntry.js
 ENV VITE_SHELL_ENTRY_URL=$VITE_SHELL_ENTRY_URL
 
-# Issuer printed on the sale documents (HU-VEN-19). Explicit configuration with no default: the PDF/XML
-# downloads refuse to generate until the legal name and the NIT are provided. Public company data, not a secret.
-ARG VITE_ISSUER_LEGAL_NAME=
+# Owner-confirmed public issuer (HU-VEN-19), overridable at build time.
+# Explicit empty values still disable generation; no contact details are invented.
+ARG VITE_ISSUER_LEGAL_NAME="synkro tech sas"
 ENV VITE_ISSUER_LEGAL_NAME=$VITE_ISSUER_LEGAL_NAME
-ARG VITE_ISSUER_TAX_ID=
+ARG VITE_ISSUER_TAX_ID=803.256.942-7
 ENV VITE_ISSUER_TAX_ID=$VITE_ISSUER_TAX_ID
 ARG VITE_ISSUER_ADDRESS=
 ENV VITE_ISSUER_ADDRESS=$VITE_ISSUER_ADDRESS

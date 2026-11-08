@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<saleDocument xmlns="urn:synkro:sales:sale-document:1.0" schemaVersion="1.0">
+<saleDocument xmlns="urn:synkro:sales:sale-document:1.1" schemaVersion="1.1">
   <documentType>COMMERCIAL_RECEIPT</documentType>
   <fiscalValidity>NONE</fiscalValidity>
   <saleId>550e8400-e29b-41d4-a716-446655440003</saleId>
