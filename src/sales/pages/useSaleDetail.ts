@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCustomer } from '../api/customersApi'
 import { getProduct } from '../api/productsApi'
+import { runPool } from '../api/pool'
 import { getSale } from '../api/salesApi'
 import type { Customer } from '../model/customer'
 import { isUuid } from '../model/identifier'
@@ -22,13 +23,6 @@ export type SaleState =
 
 interface Metadata { sale: Sale; customer: Meta<Customer>; products: Record<string, Meta<Product>> }
 const LOADING: Meta<never> = { status: 'loading' }
-
-async function runPool(tasks: (() => Promise<void>)[], limit: number) {
-  let next = 0
-  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, async () => {
-    while (next < tasks.length) await tasks[next++]()
-  }))
-}
 
 export function useSaleDetail(saleId: string) {
   const valid = isUuid(saleId)

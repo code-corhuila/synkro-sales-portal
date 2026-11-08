@@ -16,6 +16,19 @@ ENV VITE_BASE_PATH=$VITE_BASE_PATH
 ARG VITE_SHELL_ENTRY_URL=http://localhost:5173/assets/remoteEntry.js
 ENV VITE_SHELL_ENTRY_URL=$VITE_SHELL_ENTRY_URL
 
+# Owner-confirmed public issuer (HU-VEN-19), overridable at build time.
+# Explicit empty values still disable generation; no contact details are invented.
+ARG VITE_ISSUER_LEGAL_NAME="synkro tech sas"
+ENV VITE_ISSUER_LEGAL_NAME=$VITE_ISSUER_LEGAL_NAME
+ARG VITE_ISSUER_TAX_ID=803.256.942-7
+ENV VITE_ISSUER_TAX_ID=$VITE_ISSUER_TAX_ID
+ARG VITE_ISSUER_ADDRESS=
+ENV VITE_ISSUER_ADDRESS=$VITE_ISSUER_ADDRESS
+ARG VITE_ISSUER_PHONE=
+ENV VITE_ISSUER_PHONE=$VITE_ISSUER_PHONE
+ARG VITE_ISSUER_EMAIL=
+ENV VITE_ISSUER_EMAIL=$VITE_ISSUER_EMAIL
+
 RUN npm run build
 # Fails the image when the compiled portal has what it must not (see scripts/compiledCheck.mjs).
 RUN npm run check:compiled
