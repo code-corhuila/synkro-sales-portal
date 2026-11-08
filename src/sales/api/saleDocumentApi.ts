@@ -9,6 +9,7 @@ import { getCustomer } from './customersApi'
 import { runPool } from './pool'
 import { getProduct } from './productsApi'
 import { getSale } from './salesApi'
+import { readDocumentSource } from './documentReadRetry'
 
 // Reads everything a sale document needs, only through the Host's client and only with capabilities
 // the caller already has: Sales (authoritative, role/ownership enforced by the server), Customers and
@@ -76,7 +77,7 @@ export async function loadSaleDocumentSources(saleId: string, { signal }: { sign
   const live = () => { if (signal?.aborted) throw abortError() }
   const guarded = async <T>(subject: Subject, work: () => Promise<T>, id?: string): Promise<T> => {
     try {
-      const value = await work()
+      const value = await readDocumentSource(work, signal)
       live()
       return value
     } catch (error) {

@@ -1,5 +1,19 @@
 # HU-VEN-19 — sale document downloads (PDF and XML)
 
+## Related-read throttling recovery design
+
+The instrumented real20-product attempt reproduced document preparation failing with HTTP429 on product,
+customer and category reads. The Gateway limits remain authoritative and unchanged. Before implementing the
+follow-up, behavioral regressions demonstrated missing retry/wait/cancellation behavior (3 failures in9 cases).
+
+Only document source GET operations may retry429: at most3 attempts per operation, through the existing Host
+client, retaining the same requested reference/options. Respect its existing retryAt timestamp; if absent,
+wait1s then2s. The cumulative waiting budget is10s; a future retryAt beyond the remaining budget fails instead
+of retrying early. Caller cancellation interrupts waits and prevents further reads.401/403/404, network errors,
+5xx, malformed data and identity mismatches are never automatically retried by this policy. Exhaustion remains
+a failed preparation with the existing manual retry/error handling; no partial file is emitted. This changes no
+authorization, mutation/idempotency behavior, Host session ownership or Gateway setting.
+
 Refs code-corhuila/synkro-docs#301. This page is the design, the field-origin record and the
 verification status of the download of a sale as PDF and XML from the sale detail. It does not close the story and it
 does not claim fiscal validity: see [Commercial scope](#commercial-scope-and-fiscal-limits).
