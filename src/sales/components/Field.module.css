@@ -44,8 +44,13 @@
 }
 
 /* In the dark theme the field sits sunken in its card, on the page colour. */
+:root[data-theme='dark'] .field :is(input, select) {
+  background: var(--color-bg-page);
+}
+
+/* Transitional fallback for a Host that has not set data-theme yet. */
 @media (prefers-color-scheme: dark) {
-  .field :is(input, select) {
+  :root:not([data-theme]) .field :is(input, select) {
     background: var(--color-bg-page);
   }
 }

@@ -48,3 +48,13 @@ Referencias: synkro-docs/main (`12-ux-ui/wireframes.md` «Screen: Sales» y «Sc
 | Temas / tipografías | Tokens del host; Big Shoulders (títulos), IBM Plex Sans, JetBrains Mono | Solo `var(--…)`; sin `:root`, colores ni fuentes propios |
 
 Brechas conocidas del contrato, sin inventar parámetros: Customers solo filtra por `identityDocument` exacto y `active` (no hay búsqueda por nombre); `GET /customers/{id}` y `GET /products/{id}` responden 404 para registros inactivos al rol SALESPERSON, por lo que el detalle de ventas antiguas puede mostrar el identificador almacenado; `SagaResponse` no incluye mensaje de rechazo, por lo que la tercera línea del aviso usa texto español aprobado por paso, no el mensaje del backend.
+
+## HU-FE-11 — verificación del tema
+
+La revisión `36b4527` pasó 348 pruebas con Node 22.23.3, lint, build y el control de compilación.
+El root privado `2f3dcf72d1142e3e872ae5d76c7992eb077ed42d` pasó 32 checkpoints con servicios reales.
+Ventas se cargó dentro del nuevo Shell en claro y oscuro, conservando el tema tras recargar.
+Los estilos calculados verificaron la elección clara con equipo oscuro y el fallback cuando
+el Host todavía no tiene data-theme. También pasaron el alcance del vendedor, reportes y Excel.
+La exportación y la limpieza pasaron. La suite devolvió 0 y el verificador suplementario devolvió
+el código previsto 2, listo para revisión.
