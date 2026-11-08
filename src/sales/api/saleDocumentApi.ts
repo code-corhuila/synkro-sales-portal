@@ -47,7 +47,13 @@ function translate(error: unknown, subject: Subject, id?: string): SaleDocumentE
 // Only an actual related-record404 can become an explicitly unavailable reference.
 // Session/access failures, transport errors and malformed successful records still fail closed.
 async function currentRecord<T>(work: () => Promise<T>): Promise<T | null> {
-  try { return await work() }
+  try {
+    const value = await work()
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw new SaleDocumentError('TRANSPORT', 'El servicio devolvió datos no válidos.')
+    }
+    return value
+  }
   catch (error) {
     if ((error as SharedError | null)?.status === 404) return null
     throw error

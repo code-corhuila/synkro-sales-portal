@@ -57,3 +57,14 @@ it('does not downgrade a network failure or malformed successful record to a404'
   })
   await expect(loadSaleDocumentSources(ids.sale)).rejects.toMatchObject({code:'TRANSPORT'})
 })
+
+it.each(['customer', 'product'] as const)('rejects a successful null %s response instead of treating it as404', async subject => {
+  serve(200,200)
+  apiClient.request.mockImplementation(async path => {
+    if (path.startsWith('/api/v1/sales/')) return saleFixture()
+    if (path === '/api/v1/products/categories') return pageOf([])
+    if (path.startsWith('/api/v1/customers/')) return subject === 'customer' ? null : customerFixture()
+    return subject === 'product' ? null : productFixture()
+  })
+  await expect(loadSaleDocumentSources(ids.sale)).rejects.toMatchObject({code:'TRANSPORT'})
+})
