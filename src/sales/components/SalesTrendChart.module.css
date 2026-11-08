@@ -9,6 +9,10 @@
 .barActive { fill: var(--color-primary-700); }
 :root[data-theme='dark'] .bar { fill: var(--color-primary-300); }
 :root[data-theme='dark'] .barActive { fill: var(--color-primary-500); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .bar { fill: var(--color-primary-300); }
+  :root:not([data-theme]) .barActive { fill: var(--color-primary-500); }
+}
 .points { display: flex; gap: var(--space-1); overflow-x: auto; padding-block: var(--space-1); }
 .point {
   min-height: var(--space-6);
@@ -26,6 +30,10 @@
 .point:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
 :root[data-theme='dark'] .point[aria-pressed='true'] { color: var(--color-primary-300); background: transparent; border-color: var(--color-primary-300); }
 :root[data-theme='dark'] .point:focus-visible { outline-color: var(--color-primary-300); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .point[aria-pressed='true'] { color: var(--color-primary-300); background: transparent; border-color: var(--color-primary-300); }
+  :root:not([data-theme]) .point:focus-visible { outline-color: var(--color-primary-300); }
+}
 
 .ranking { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .rankItem { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
@@ -36,4 +44,7 @@
 .rankTrack { height: var(--space-2); overflow: hidden; background: var(--color-text-disabled); border-radius: var(--radius-full); }
 .rankFill { display: block; height: 100%; background: var(--color-primary-500); border-radius: var(--radius-full); }
 :root[data-theme='dark'] .rankFill { background: var(--color-primary-300); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .rankFill { background: var(--color-primary-300); }
+}
 .rankDetail { align-self: flex-end; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
