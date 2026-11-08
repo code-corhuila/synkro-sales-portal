@@ -13,3 +13,6 @@
 .more { margin-top: auto; color: var(--color-secondary-action); font-weight: var(--font-weight-semibold); text-decoration: underline; text-underline-offset: 0.2em; }
 .summary :focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
 :root[data-theme='dark'] .summary :focus-visible { outline-color: var(--color-primary-300); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .summary :focus-visible { outline-color: var(--color-primary-300); }
+}

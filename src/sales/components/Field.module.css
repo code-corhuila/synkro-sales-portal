@@ -48,6 +48,13 @@
   background: var(--color-bg-page);
 }
 
+/* Transitional fallback for a Host that has not set data-theme yet. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .field :is(input, select) {
+    background: var(--color-bg-page);
+  }
+}
+
 .field :is(input, select)[aria-invalid='true'] {
   border-color: var(--color-error-700);
 }

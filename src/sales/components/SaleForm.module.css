@@ -72,3 +72,6 @@
   .spinner { animation: none; border-right-color: currentColor; opacity: 0.6; }
 }
 :root[data-theme='dark'] .total { background: var(--color-bg-page); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .total { background: var(--color-bg-page); }
+}
