@@ -52,6 +52,10 @@ Extiende `/sales` (sin ruta de registro aparte) y añade `/sales/{id}`; referenc
 
 Evidencia, brechas de contrato y dependencias reales pendientes: [verificación HU-VEN-12](docs/verification-hu-ven-12.md). La paridad visual está en [docs/visual-parity.md](docs/visual-parity.md).
 
+## HU-VEN-19 — comprobante de venta en PDF y XML
+
+El detalle `/sales/{id}` ofrece «Descargar PDF» y «Descargar XML» a ADMIN y SALESPERSON (INVENTORY no los ve; la autorización real es la de Sales API). Ambos archivos salen de un mismo modelo; importes, fecha y estado son los persistidos de la venta, y los datos del cliente y de los productos son los vigentes al generar (no existen instantáneas históricas). Es un **comprobante de alcance comercial, no una factura electrónica**: sin consecutivo, CUFE, QR, resolución ni firma. El emisor (razón social y NIT obligatorios; dirección, teléfono y correo opcionales) se configura al compilar con `VITE_ISSUER_*` (véase `.env.example`); sin ellos la descarga se niega. Referencia `Refs code-corhuila/synkro-docs#301`. Diseño, origen de cada campo, límites y estado de la verificación (la aceptación contra servicios reales sigue pendiente): [docs/sale-documents-design.md](docs/sale-documents-design.md). Esquema del XML: [docs/schemas/sale-document-1.0.xsd](docs/schemas/sale-document-1.0.xsd).
+
 ## Contenedor y CI
 
 ```sh
