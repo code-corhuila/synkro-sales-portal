@@ -15,4 +15,7 @@
 .disclosure { min-width: 0; max-height: 18rem; overflow: auto; scrollbar-gutter: stable; }
 .summary { color: var(--color-text-secondary); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); cursor: pointer; }
 .summary:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
-@media (prefers-color-scheme: dark) { .summary:focus-visible { outline-color: var(--color-primary-300); } }
+:root[data-theme='dark'] .summary:focus-visible { outline-color: var(--color-primary-300); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .summary:focus-visible { outline-color: var(--color-primary-300); }
+}
