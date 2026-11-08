@@ -16,6 +16,19 @@ ENV VITE_BASE_PATH=$VITE_BASE_PATH
 ARG VITE_SHELL_ENTRY_URL=http://localhost:5173/assets/remoteEntry.js
 ENV VITE_SHELL_ENTRY_URL=$VITE_SHELL_ENTRY_URL
 
+# Issuer printed on the sale documents (HU-VEN-19). Explicit configuration with no default: the PDF/XML
+# downloads refuse to generate until the legal name and the NIT are provided. Public company data, not a secret.
+ARG VITE_ISSUER_LEGAL_NAME=
+ENV VITE_ISSUER_LEGAL_NAME=$VITE_ISSUER_LEGAL_NAME
+ARG VITE_ISSUER_TAX_ID=
+ENV VITE_ISSUER_TAX_ID=$VITE_ISSUER_TAX_ID
+ARG VITE_ISSUER_ADDRESS=
+ENV VITE_ISSUER_ADDRESS=$VITE_ISSUER_ADDRESS
+ARG VITE_ISSUER_PHONE=
+ENV VITE_ISSUER_PHONE=$VITE_ISSUER_PHONE
+ARG VITE_ISSUER_EMAIL=
+ENV VITE_ISSUER_EMAIL=$VITE_ISSUER_EMAIL
+
 RUN npm run build
 # Fails the image when the compiled portal has what it must not (see scripts/compiledCheck.mjs).
 RUN npm run check:compiled
