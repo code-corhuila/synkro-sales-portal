@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
       // and the minifier writes them as template literals, so the remote entry breaks
       // without this. Revisit when the plugin or the bundler changes.
       minify: false,
+      // Unminified output keeps the JSDoc blocks of dependencies. pdf-lib documents its API with examples that
+      // contain `fetch(url)`, which the compiled-boundary check (scripts/compiledCheck.mjs) would read as real
+      // transport. Strip JSDoc only: legal and annotation comments are kept.
+      rolldownOptions: { output: { comments: { jsdoc: false } } },
     },
     preview: { port: 5176, strictPort: true },
     test: {
