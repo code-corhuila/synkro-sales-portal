@@ -323,7 +323,7 @@ export async function buildSaleDocumentPdf(model: SaleDocument): Promise<Uint8Ar
     const noticeLines = [
       { text: 'Comprobante de venta de alcance comercial.', face: faces.bold, color: RED_DARK },
       ...wrap(faces.sans, 'Este documento no es una factura electrónica de venta ni un documento tributario validado: no incluye consecutivo de facturación, CUFE, código QR, resolución ni firma digital, y no discrimina impuestos.', 8.25, noticeInner).map((text) => ({ text, face: faces.sans, color: MUTED })),
-      ...wrap(faces.sans, 'Importes en pesos colombianos (COP). Fecha, cantidades, precios y total corresponden a la venta registrada; los datos del cliente y la descripción de los productos son los vigentes al generar este archivo.', 8.25, noticeInner).map((text) => ({ text, face: faces.sans, color: MUTED })),
+      ...wrap(faces.sans, 'Importes en pesos colombianos (COP). Fecha, cantidades, precios y total corresponden a la venta registrada. Cuando están disponibles, los datos del cliente y las descripciones son los vigentes al generar este archivo; en otro caso se indica la referencia y su indisponibilidad.', 8.25, noticeInner).map((text) => ({ text, face: faces.sans, color: MUTED })),
     ]
     const noticeHeight = px(10) * 2 + noticeLines.length * 11.2
     const needed = px(14) + grandHeight + px(16) + noticeHeight
