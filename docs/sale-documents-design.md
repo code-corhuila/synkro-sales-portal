@@ -2,14 +2,14 @@
 
 ## Related-read throttling recovery design
 
-The instrumented real20-product attempt reproduced document preparation failing with HTTP429 on product,
+The instrumented real 20-product attempt reproduced document preparation failing with HTTP 429 on product,
 customer and category reads. The Gateway limits remain authoritative and unchanged. Before implementing the
-follow-up, behavioral regressions demonstrated missing retry/wait/cancellation behavior (3 failures in9 cases).
+follow-up, behavioral regressions demonstrated missing retry/wait/cancellation behavior (3 failures in 9 cases).
 
-Only document source GET operations may retry429: at most3 attempts per operation, through the existing Host
+Only document source GET operations may retry HTTP 429: at most 3 attempts per operation, through the existing Host
 client, retaining the same requested reference/options. Respect its existing retryAt timestamp; if absent,
-wait1s then2s. The cumulative waiting budget is10s; a future retryAt beyond the remaining budget fails instead
-of retrying early. Caller cancellation interrupts waits and prevents further reads.401/403/404, network errors,
+wait 1 s then 2 s. The cumulative waiting budget is 10 s; a future retryAt beyond the remaining budget fails instead
+of retrying early. Caller cancellation interrupts waits and prevents further reads. 401/403/404, network errors,
 5xx, malformed data and identity mismatches are never automatically retried by this policy. Exhaustion remains
 a failed preparation with the existing manual retry/error handling; no partial file is emitted. This changes no
 authorization, mutation/idempotency behavior, Host session ownership or Gateway setting.
@@ -18,9 +18,9 @@ Refs code-corhuila/synkro-docs#301. This page is the design, the field-origin re
 verification status of the download of a sale as PDF and XML from the sale detail. It does not close the story and it
 does not claim fiscal validity: see [Commercial scope](#commercial-scope-and-fiscal-limits).
 
-Status (2026-11-07): implemented and verified with unit, component, integration-with-doubles and real-browser tests.
-**Real-service acceptance (ADMIN, owner SALESPERSON, foreign sale) has not been run**; see
-[Real-service acceptance](#real-service-acceptance-pending). Remote CI and owner review are pending.
+Status (2026-11-07): implementation, final repository gates and targeted real-service acceptance passed.
+See [Completion verification](#completion-verification). Peer review, hosted CI and controlled promotion remain
+separate delivery steps; the HU is not closed. This is not a new full21/21 platform acceptance.
 
 ## Criteria, tests and components
 
@@ -73,8 +73,7 @@ of 100 lines (the Sales API maximum) is covered by a test.
 `sanitizeText` is the one text policy shared by both files: NFC, control characters and lone surrogates replaced by U+FFFD,
 runs of whitespace collapsed. Optional values that are empty are omitted (never `undefined`/`null`).
 
-Source reads (`loadSaleDocumentSources`) run through the shared pool with 4 concurrent requests, cancel the rest after the
-first failure and honour an `AbortSignal`.
+Source reads (`loadSaleDocumentSources`) use the shared pool with at most4 concurrent requests and honour the caller's `AbortSignal`. A read failure prevents a download; requests already in flight are not claimed to be cancelled by that failure.
 
 ### PDF
 
@@ -154,7 +153,7 @@ line is a comment.
 
 ## Known limits
 
-* A related-record404 is represented explicitly by its persisted reference and an unavailable marker, never by a guessed name or an alternate privileged lookup. It does not prove whether the record was deleted, hidden or inactive. Other failures still stop generation.
+* A related-record 404 is represented explicitly by its persisted reference and an unavailable marker, never by a guessed name or an alternate privileged lookup. It does not prove whether the record was deleted, hidden or inactive. Other failures still stop generation.
 * No seller name (unavailable to this feature, see [Where every field comes from](#where-every-field-comes-from), not
   nonexistent data); no category when the list does not return it; no historical snapshot (see above).
 * The PDF fonts cover Latin text only (other characters print as "?" in the PDF).
@@ -194,23 +193,18 @@ completed the download. INVENTORY showed no buttons. Samples (synthetic data, no
 [docs/examples/sale-document](examples/sale-document): `pdf-active-1-page.png`, `pdf-voided.png`,
 `pdf-multipage-p1.png`, `pdf-multipage-last.png` and `sale-document.xml`.
 
-## Real-service acceptance (pending)
+## Real-service acceptance
 
-Not run. Docker was in use by another task's isolated stack (containers `synkro-isolated-…-runner/daemon`), no
-`HEAVY-DOCKER.lock` lease could be found to take, and a disposable full stack (Auth, Customers, Products, Sales, their
-databases, Gateway, Front) is a heavy build; it was not started on top of someone else's run. Mocks do not replace it.
-To run it:
+The targeted real-service run is complete; see the exact revisions and scope below. The fixture starts an owned
+disposable Gateway/Auth/Customers/Products/Sales/Workflow mesh with PostgreSQL and MongoDB and the real built
+Host/remotes. Users and active sales are created only through public APIs and the Workflow saga.
 
-1. Take the `HEAVY-DOCKER.lock` lease as in `synkro-auth-api/docs/hu-auth-15-verify-admin-registration.md`, then build a
-   disposable stack from clean checkouts of the released tags, as described in
-   [verification-hu-ven-12.md](verification-hu-ven-12.md), with this portal built with the `VITE_ISSUER_*` values and
-   `VITE_BASE_PATH=/remotes/sales/`. Use only your own fixtures and containers; remove them by exact name afterwards.
-2. Create one ADMIN and two SALESPERSON users through Auth, one customer, two active products, one sale by each
-   SALESPERSON, one voided sale.
-3. As ADMIN: download PDF and XML of a sale of each SALESPERSON. As the owner SALESPERSON: download PDF and XML of their
-   own sale. As the owner SALESPERSON: open the other one's sale by URL and try the download — expect 403 and no data.
-4. Compare each file with `GET /api/v1/sales/{id}` (id, date, status, quantities, cents, total) and with the customer and
-   product reads; check the XML against the XSD and the PDF visually. Record the result here; only then tick criteria.
+To repeat: freeze the desired revisions and committed dependency lock, take the shared heavy-execution lease,
+build the owned fixture, create ADMIN/two SALESPERSON/INVENTORY identities, then compare authorized PDF/XML
+downloads with the real Sales detail. Include foreign403, INVENTORY 403, anonymous 401, missing-sale404,
+related-record 404 reference-only exports, multipage readback/schema validation and transport failure/retry.
+Use a clearly identified synthetic issuer override for fixture documents, never production defaults silently
+relabelled as a test company. Retire only the owned fixture resources and release its own lease.
 
 ## Owner-approved completion design (2026-11-07)
 
@@ -221,11 +215,71 @@ A related401/403/429/5xx, network failure, wrong-identity response or malformed 
 No role escalation, catalogue scan, backend contract change, migration or historical snapshot was introduced.
 
 In both formats, historical identifiers, amounts and quantities remain complete. PDF shows the persisted
-customer/product reference with “Datos actuales no disponibles”. XML1.1 uses origin="UNAVAILABLE" and an
+customer/product reference with “Datos actuales no disponibles”. The commercial XML schema 1.1 uses origin="UNAVAILABLE" and an
 unavailable element instead of inventing a name or identityDocument. Available records retain CURRENT_RECORD.
-The XML declaration remains XML1.0; only the commercial schema/namespace is1.1. The earlier1.0 XSD is retained
+The XML declaration remains XML 1.0; only the commercial schema/namespace is1.1. The earlier 1.0 XSD is retained
 as a historical schema, not the newly generated format. Missing current metadata is explicit, never silent.
 
 A behavioral RED regression reproduced the original404 export failure before this follow-up was applied.
 Identity mismatch and malformed active-flag checks from Claude were reviewed and are verified alongside it.
 The original late-design process note above remains accurate for the initial implementation.
+
+## Completion verification
+
+Runtime candidate: `625c889738655b1a6375ebe775c731b477a3e494`. Private acceptance root: `ce5c861148e833826e937b4d28b78a6d40da33af`;
+committed lock SHA-256: `a9b91cfda34e972306c664b1bac83fb8a09716a0bb29bc3a21592fb9c5d52272`. Public fixture baseline: Infra `c2da13b7ae83696037d74a7543ba4af84f04ce57` and its committed dependency lock. The root is test-only: it selects the exact Sales Portal
+candidate and retains the other 16 owner revisions from the previously accepted FE-11 QA selection.
+It adds the document checks and a synthetic issuer override; no public Infra or backend contract was changed.
+
+- Local Node 22.23.3: **508/508 tests**, 48 files, using `npm run test -- --coverage --maxWorkers=1`.
+  Coverage: 96.57% statements, 93.49% branches, 99.51% functions, 99.26% lines. Lint, TypeScript/Vite build,
+  compiled boundary and **3/3 Python deployment checks** passed. No test assertions or deadlines were relaxed.
+- Additional static UI audit reports 3 findings in unchanged develop components (native date/select ownership
+  and the generic Button action heuristic). All 3 files were verified unchanged by this PR. It is not claimed
+  as a globally clean static UI audit; generated audit JSON stays outside the product repository.
+- Behavior-first follow-ups: a related-record 404 blocked generation before the reference policy; two 200/null
+  regressions failed before the response validation fix. Product-id mismatch and ambiguous sale.active values
+  are rejected. Follow-up regression evidence is retained outside the product repo.
+- **11/11 targeted real-service checks** passed with 4 real UI logins and **5 independently read PDF/XML pairs**:
+  ADMIN own/other seller, owner SALESPERSON, a multipage sale, and references after actual customer/product
+  deactivation. XML validated against XSD 1.1 and file amounts/identifiers matched real persisted Sales responses.
+  PDF readback checked names, Spanish accents and exact cent amounts; all downloaded pages were rendered for review.
+- Actual foreign-sale 403, INVENTORY 403, anonymous 401 and nonexistent-sale 404 were observed. No foreign download
+  was produced. A real transport abort exposed retry and the subsequent real request downloaded successfully.
+- Real composed container build and `nginx -t` passed. The synthetic issuer reached the served bundle, as checked
+  from both downloaded formats. Product deployment defaults remain the owner-confirmed public name/NIT above.
+- The successful browser run still observed 4 HTTP 429 responses (3 product reads and 1 sale read); the application completed its checks without increasing Gateway limits.
+- Internal/export/outer cleanup passed. The workstation's preexisting synkro-dev database was preserved and the
+  heavy-execution lease released. Cache was reused, not pruned.
+- This is supplementary review-ready evidence: its suite exits 0 and the established outer runner exits 2.
+  It is **not** a fresh 21/21 full-suite run or a hosted-CI pass. The exact selection, hashes and validated result
+  remain in the local delivery folder `deliverables/hu-ven-19-completion/` of the verification workspace.
+
+Earlier evidence was retained: the first real attempt failed in the independent PDF reader's teardown
+(`PDFDocumentProxy.destroy` is absent in this pdf.js version; destruction belongs to its loading task).
+The second attempt exposed that raw PDF text order interleaves numeric cells inside wrapped product names;
+the reader was corrected to compare complete names from the description column identified by its header.
+Attempts 3/4 then exposed the real 20-product failure; instrumented capture recorded HTTP 429 on product,
+customer and category reads. The bounded, cancellation-aware GET retry policy above was implemented after
+its behavioral RED regressions, without changing Gateway limits. All four failed attempts were retained
+and are not counted as acceptance. One default-parallel unit attempt timed out
+in an existing navigation test while the stack acceptance was active; the final complete run above was
+performed separately with one worker and unchanged test timeouts. The final candidate includes all runtime
+fixes; any later commit that only records these results must retain identical application/deployment sources.
+
+Attempt 5 successfully exported the 20-product sale with a 3-page PDF and valid XML after the retry fix,
+then failed a later authorization navigation assertion while another429 was observed. That failed run
+is retained too, not counted as acceptance. For the final run, only fixture/independent-readback traffic
+was paced at 100 ms per request to stay below the Gateway budget; application traffic and Gateway settings
+were unchanged. The browser must now observe the actual foreign-sale 403 before the original redirect check.
+The final evidence validator also rejected 13 independent tamper cases (root, lock, pins, exit/status,
+cleanup, missing/duplicate checks, documents, hashes, export and false full-acceptance claims).
+
+Current real-fixture previews replace the existing active/multipage samples and XML in examples/sale-document;
+pdf-unavailable-records.png shows the owner-approved references-only policy. The retained pdf-voided.png is
+an earlier synthetic renderer example, not a real annulled-sale API download.
+
+Limits remain explicit: the selected Sales API hides annulled sales with 404, so the ANULADA renderer is covered
+by unit tests rather than claimed as a real annulled-sale download. Customer/product descriptions are current
+when available, not historical snapshots. The supplied logo asset and Latin font coverage are unchanged.
+No fiscal validation, electronic invoice integration, promotion, issue closure or synkro-docs update is included.
