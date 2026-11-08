@@ -200,6 +200,10 @@ Revenue remains a secondary value. Summary cards retain their existing, explicit
 The supplied demonstration totals, growth percentages, categories and seller breakdowns do not
 establish new report contracts. Those additions need API design and verification before delivery.
 The portal consumes the Host theme and font tokens without loading external fonts.
+Its dark rules key off `:root[data-theme='dark']`; a `prefers-color-scheme: dark`
+fallback, scoped to `:root:not([data-theme])`, only covers a Host build that has not
+started setting that attribute yet, and steps aside the moment the attribute appears
+(including `data-theme='light'`).
 
 Filled in the PR and in `docs/verification-hu-fe-09.md` (tiles) and
 `docs/verification-hu-fe-10.md` (interactive trend) once real executions exist, separating
