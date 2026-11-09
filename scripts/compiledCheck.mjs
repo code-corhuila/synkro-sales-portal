@@ -24,13 +24,23 @@ export const RULES = [
 ]
 
 // One violation per file and rule: { file, rule }.
+// The only two noncredential records the portal may keep in sessionStorage: the unresolved
+// registration (idempotency intent) and the sale in progress (identifiers and quantities).
+// Each exception belongs to its own binding AND its own literal key.
+const JOURNALS = [
+  { constant: 'STORAGE_KEY', key: 'synkro\\.sales\\.intent\\.v1', alias: 'intentStorage' },
+  { constant: 'DRAFT_STORAGE_KEY', key: 'synkro\\.sales\\.draft\\.v1', alias: 'draftStorage' },
+]
+
 export function findViolations(files) {
   return files.flatMap(({ name, text }) => {
     // Narrow exception for noncredential recovery. Arbitrary keys, aliases,
     // bracket access, clear(), localStorage and credential markers still fail.
-    const journal = /\b(?:const|var) STORAGE_KEY\s*=\s*['"]synkro\.sales\.intent\.v1['"];/.test(text)
-      ? text.replace(/\bsessionStorage(?=\.(?:getItem|setItem|removeItem)\(STORAGE_KEY\s*[,)])/g, 'intentStorage')
-      : text
+    const journal = JOURNALS.reduce((current, { constant, key, alias }) => (
+      new RegExp(`\\b(?:const|var) ${constant}\\s*=\\s*['"]${key}['"];`).test(text)
+        ? current.replace(new RegExp(`\\bsessionStorage(?=\\.(?:getItem|setItem|removeItem)\\(${constant}\\s*[,)])`, 'g'), alias)
+        : current
+    ), text)
     return RULES.filter(({ rule, patterns }) => patterns.some((pattern) => pattern.test(rule === 'token-handling' ? journal : text)))
       .map(({ rule }) => ({ file: name, rule }))
   })
