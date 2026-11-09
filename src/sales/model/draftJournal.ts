@@ -13,7 +13,7 @@ export interface DraftRecord {
   lines: { productId: string; quantity: number }[]
 }
 
-const STORAGE_KEY = 'synkro.sales.draft.v1'
+const DRAFT_STORAGE_KEY = 'synkro.sales.draft.v1'
 const MAX_DRAFT_LINES = 100
 
 export const draftOwner = recoveryOwner
@@ -42,7 +42,7 @@ export function readDraft(owner: string | null): DraftRecord | null {
   if (!owner) return null
   try {
     // eslint-disable-next-line no-restricted-globals -- Only this noncredential sale-in-progress record is read here.
-    const raw = sessionStorage.getItem(STORAGE_KEY)
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY)
     if (!raw) return null
     const record = JSON.parse(raw) as { owner?: unknown; draft?: unknown }
     if (record.owner !== owner) { removeDraft(); return null }
@@ -60,7 +60,7 @@ let unsubscribe: (() => void) | undefined
 export function removeDraft() {
   try {
     // eslint-disable-next-line no-restricted-globals -- Removes only this portal's sale-in-progress record.
-    sessionStorage.removeItem(STORAGE_KEY)
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY)
   } catch { /* storage unavailable: nothing was kept */ }
   unsubscribe?.()
   unsubscribe = undefined
@@ -73,7 +73,7 @@ export function writeDraft(owner: string | null, draft: DraftRecord) {
   if (!draft.customerId && !draft.lines.length) { removeDraft(); return }
   try {
     // eslint-disable-next-line no-restricted-globals -- Only identifiers and quantities are persisted.
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ owner, draft: { customerId: draft.customerId, lines: draft.lines.map(({ productId, quantity }) => ({ productId, quantity })) } }))
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ owner, draft: { customerId: draft.customerId, lines: draft.lines.map(({ productId, quantity }) => ({ productId, quantity })) } }))
     watchOwner(owner)
   } catch { /* quota or blocked storage */ }
 }
