@@ -13,8 +13,8 @@ class Deployment(unittest.TestCase):
         args=self.model()['services']['synkro-sales-portal']['build']['args']
         self.assertEqual(args['VITE_ISSUER_ADDRESS'],'CRA 7 # 34-56')
         self.assertEqual(args['VITE_ISSUER_EMAIL'],'RECEPCION@SYNKROTECH.COM')
-        # Provided by the owner on 2026-11-08; not independently confirmed (see the delivery notes).
-        self.assertEqual(args['VITE_ISSUER_PHONE'],'3100000000')
+        # Confirmed by the owner on 2026-11-08 as SynkroTech's number.
+        self.assertEqual(args['VITE_ISSUER_PHONE'],'3104662443')
     def test_an_empty_variable_never_blanks_the_confirmed_legal_name_or_tax_id(self):
         args=self.model(VITE_ISSUER_LEGAL_NAME='',VITE_ISSUER_TAX_ID='')['services']['synkro-sales-portal']['build']['args']
         self.assertEqual(args['VITE_ISSUER_LEGAL_NAME'],'synkro tech sas')
