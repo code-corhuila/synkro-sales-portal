@@ -9,6 +9,16 @@ class Deployment(unittest.TestCase):
         overridden=self.model(VITE_ISSUER_LEGAL_NAME='VEN19 TEST FIXTURE',VITE_ISSUER_TAX_ID='TEST-VEN19-NOT-FISCAL')['services']['synkro-sales-portal']['build']['args']
         self.assertEqual(overridden['VITE_ISSUER_LEGAL_NAME'],'VEN19 TEST FIXTURE')
         self.assertEqual(overridden['VITE_ISSUER_TAX_ID'],'TEST-VEN19-NOT-FISCAL')
+    def test_confirmed_issuer_contacts_are_the_defaults(self):
+        args=self.model()['services']['synkro-sales-portal']['build']['args']
+        self.assertEqual(args['VITE_ISSUER_ADDRESS'],'CRA 7 # 34-56')
+        self.assertEqual(args['VITE_ISSUER_EMAIL'],'RECEPCION@SYNKROTECH.COM')
+        # Provided by the owner on 2026-11-08; not independently confirmed (see the delivery notes).
+        self.assertEqual(args['VITE_ISSUER_PHONE'],'3100000000')
+    def test_an_empty_variable_never_blanks_the_confirmed_legal_name_or_tax_id(self):
+        args=self.model(VITE_ISSUER_LEGAL_NAME='',VITE_ISSUER_TAX_ID='')['services']['synkro-sales-portal']['build']['args']
+        self.assertEqual(args['VITE_ISSUER_LEGAL_NAME'],'synkro tech sas')
+        self.assertEqual(args['VITE_ISSUER_TAX_ID'],'803.256.942-7')
     def model(self, **values):
         env = dict(os.environ)
         env.pop('VITE_BASE_PATH', None)
@@ -24,9 +34,6 @@ class Deployment(unittest.TestCase):
         self.assertEqual(Path(service['build']['context']).resolve(),ROOT)
         self.assertEqual(service['build']['args']['VITE_BASE_PATH'],'/remotes/sales/')
         self.assertEqual(service['build']['args']['VITE_SHELL_ENTRY_URL'],'http://localhost:5173/assets/remoteEntry.js')
-        # Required issuer values use owner-confirmed public defaults; optional contacts remain absent.
-        for name in ('VITE_ISSUER_ADDRESS','VITE_ISSUER_PHONE','VITE_ISSUER_EMAIL'):
-            self.assertEqual(service['build']['args'][name],'')
         self.assertEqual(service['environment']['HOST_ORIGIN'],'http://localhost:5173')
         self.assertFalse(service.get('secrets'))
         self.assertFalse(service.get('volumes'))
