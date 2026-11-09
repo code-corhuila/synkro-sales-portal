@@ -69,3 +69,13 @@ it('una lista con atributo hidden no queda visible por el display de su clase', 
   const form = readFileSync(resolve('src/sales/components/SaleForm.module.css'), 'utf8')
   expect(form).toMatch(/\.lines\[hidden\]\s*\{[^}]*display:\s*none/)
 })
+
+// Seen in a real browser: the 22rem minimum of the generic identifier class stretched the "Número" column and
+// squeezed the customer's name and document to a few characters per line.
+it('la tabla del historial reserva ancho al cliente y no estira el número', () => {
+  const table = readFileSync(resolve('src/sales/components/SalesTable.module.css'), 'utf8')
+  const source = readFileSync(resolve('src/sales/components/SalesTable.tsx'), 'utf8')
+  expect(table).toMatch(/\.customer\s*\{[^}]*min-width:\s*14rem/)
+  expect(table).toMatch(/\.number\s*\{[^}]*white-space:\s*nowrap/)
+  expect(source).not.toContain('styles.identifier')
+})

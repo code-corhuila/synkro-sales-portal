@@ -22,7 +22,7 @@ export function SalesTableRegion({ children, loading = false }: { children: Reac
 }
 
 function CustomerCell({ label }: { label: CustomerLabel | undefined }) {
-  if (label?.status === 'ready') return <><span>{label.name}</span><br /><span className={styles.identifier}>Documento {label.document}</span></>
+  if (label?.status === 'ready') return <><span>{label.name}</span><br /><span className={styles.document}>Documento {label.document}</span></>
   if (label?.status === 'unavailable') return <span role="status">Datos del cliente no disponibles</span>
   return <span role="status">Cargando cliente…</span>
 }
@@ -30,9 +30,9 @@ function CustomerCell({ label }: { label: CustomerLabel | undefined }) {
 export function SalesTable({ sales, customers }: { sales: Sale[]; customers: ReadonlyMap<string, CustomerLabel> }) {
   return <SalesTableRegion>
     {sales.map((sale) => <tr key={sale.saleId}>
-      <td className={styles.identifier}>{sale.commercialNumber ?? 'Sin consecutivo'}</td>
+      <td className={styles.number}>{sale.commercialNumber ?? 'Sin consecutivo'}</td>
       <td className={styles.numeric}><time dateTime={sale.date}>{formatDate(sale.date)}</time></td>
-      <td><CustomerCell label={customers.get(sale.customerId)} /></td>
+      <td className={styles.customer}><CustomerCell label={customers.get(sale.customerId)} /></td>
       <td className={styles.numeric}>{sale.details.length}</td>
       <td className={styles.numeric}>{formatCents(sale.totalCents)}</td>
       <td className={styles.actionsCell}>
