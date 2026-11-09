@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
@@ -22,7 +22,9 @@ beforeEach(() => {
   let counter = 0
   vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`)
   apiClient.request.mockReset().mockImplementation((path) => {
-    if (path === '/api/v1/customers') return Promise.resolve(pageOf([customerFixture()]))
+    if (path === '/api/v1/customers/search') return Promise.resolve({ data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } })
+    if (path === `/api/v1/customers/${ids.customer}`) return Promise.resolve(customerFixture())
+    if (path.startsWith('/api/v1/products/') && path !== '/api/v1/products/categories') return Promise.resolve(productFixture())
     if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === `${SAGAS}/register-sale`) return reply(postReplies)
@@ -92,7 +94,8 @@ it('error de red: conserva el formulario y «Reintentar envío» reutiliza la mi
   await fill(user)
   await submit(user)
   expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo confirmar si la venta fue recibida')
-  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('2')
+  // The sent attempt stays on screen exactly as sent, read-only.
+  expect(within(screen.getByRole('region', { name: 'Intento de venta enviado' })).getByText(/Teclado mecánico × 2/)).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Reintentar envío' }))
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts().map(([, o]) => o?.idempotencyKey)).toEqual(['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001'])
@@ -108,7 +111,8 @@ it('RUNNING: anuncia el procesamiento, bloquea el formulario y consulta hasta CO
   await submit(user)
   expect(await screen.findByText('Procesando venta…')).toBeVisible()
   expect(screen.getByRole('button', { name: /Registrando venta/ })).toBeDisabled()
-  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toBeDisabled()
+  expect(within(screen.getByRole('region', { name: 'Intento de venta enviado' })).getByText(/Teclado mecánico × 2/)).toBeVisible()
+  expect(screen.queryByLabelText('Cantidad de Teclado mecánico')).toBeNull()
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts()).toHaveLength(1)

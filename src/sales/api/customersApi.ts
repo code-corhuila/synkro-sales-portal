@@ -1,30 +1,44 @@
 import { apiClient } from 'shell/apiClient'
-import { pathId } from '../model/identifier'
-import type { Customer } from '../model/customer'
-import type { Page } from '../model/page'
+import { pathId, isUuid } from '../model/identifier'
+import {
+  CUSTOMER_QUERY_MAX, CUSTOMER_QUERY_MIN, CUSTOMER_SUGGESTION_LIMIT, customerQueryLength,
+  type Customer, type CustomerMatch, type CustomerSearchResult, type CustomerSuggestion,
+} from '../model/customer'
 
 interface Options { signal?: AbortSignal }
-
-// The only documented customer search is the exact identityDocument filter
-// (GET /customers). It answers inactive customers too, so the form can say why one cannot be used.
-export async function findCustomersByDocument(identityDocument: string, { signal }: Options = {}): Promise<Customer[]> {
-  const document = identityDocument.trim()
-  if (!document || document.length > 30) throw new Error('Documento de cliente inválido')
-  const page = await apiClient.request<Page<Customer>>('/api/v1/customers', {
-    query: { identityDocument: document, page: 1, limit: 5 }, signal,
-  })
-  return page.data
-}
 
 export async function getCustomer(customerId: string, { signal }: Options = {}): Promise<Customer> {
   return apiClient.request<Customer>(`/api/v1/customers/${pathId(customerId)}`, { signal })
 }
 
-export const CUSTOMER_SEARCH_LIMIT = 5
+const MATCHES: readonly string[] = ['DOCUMENT_EXACT', 'DOCUMENT_PREFIX', 'NAME']
 
-// Customers-side contract pending (HU-CLI-05, #304): a bounded name-or-document search with a body, so
-// the search text never travels in a URL. Until it is delivered the only documented lookup is the exact
-// document filter, so a term is answered with that and nothing else. This must not invent an endpoint.
-export async function searchCustomers(term: string, options: Options = {}): Promise<Customer[]> {
-  return (await findCustomersByDocument(term, options)).slice(0, CUSTOMER_SEARCH_LIMIT)
+function parseSuggestion(value: unknown): CustomerSuggestion {
+  const invalid = () => new Error('Respuesta de búsqueda inválida')
+  if (!value || typeof value !== 'object') throw invalid()
+  const item = value as Record<string, unknown>
+  if (typeof item.customerId !== 'string' || !isUuid(item.customerId)) throw invalid()
+  if (typeof item.name !== 'string' || !item.name.trim()) throw invalid()
+  if (typeof item.identityDocument !== 'string' || !item.identityDocument.trim()) throw invalid()
+  if (typeof item.active !== 'boolean') throw invalid()
+  if (typeof item.match !== 'string' || !MATCHES.includes(item.match)) throw invalid()
+  // Only the contract's fields are kept: anything else the service might add never reaches the screen.
+  return { customerId: item.customerId, name: item.name, identityDocument: item.identityDocument, active: item.active, match: item.match as CustomerMatch }
+}
+
+// Bounded name-or-document search served by Customers (HU-CLI-05, POST /api/v1/customers/search).
+// The text travels in the body, never in the URL. Sales only ever asks for ACTIVE customers: the
+// service's own default, sent explicitly. A read: no Idempotency-Key, safe to retry and to abort.
+// Suggestions are advisory; the Workflow's own customer validation decides at registration.
+export async function searchCustomers(text: string, { signal }: Options = {}): Promise<CustomerSearchResult> {
+  const query = text.trim()
+  const length = customerQueryLength(query)
+  if (length < CUSTOMER_QUERY_MIN || length > CUSTOMER_QUERY_MAX) throw new Error('Búsqueda de cliente inválida')
+  const answer = await apiClient.request<unknown>('/api/v1/customers/search', { method: 'POST', body: { query, status: 'ACTIVE' }, signal })
+  const invalid = () => new Error('Respuesta de búsqueda inválida')
+  if (!answer || typeof answer !== 'object') throw invalid()
+  const { data, meta } = answer as { data?: unknown; meta?: { hasMore?: unknown } }
+  if (!Array.isArray(data) || !meta || typeof meta !== 'object' || typeof meta.hasMore !== 'boolean') throw invalid()
+  const parsed = data.map(parseSuggestion)
+  return { data: parsed.slice(0, CUSTOMER_SUGGESTION_LIMIT), hasMore: meta.hasMore || parsed.length > CUSTOMER_SUGGESTION_LIMIT }
 }
