@@ -295,8 +295,7 @@ No fiscal validation, electronic invoice integration, promotion, issue closure o
   `saleId` stays in the footer as the internal reference. Without a number the title falls back to the `saleId`.
 * Issuer: `VITE_ISSUER_*` are compiled into the image. The compose defaults use `:-`, so an empty variable can no longer blank the
   confirmed legal name or NIT. Changing a value requires rebuilding the image; editing `.env` alone does not change
-  documents already served. The phone number was supplied by the owner on 2026-11-08 and is not independently
-  confirmed.
+  documents already served. The phone number was confirmed by the owner on 2026-11-08 as SynkroTech's number.
 * The history shows the customer's **current** name and document (Customers is the source; there is no snapshot of
   the sale date), reading each distinct customer once with at most four requests in flight. A customer that cannot be
   read is shown as "Datos del cliente no disponibles".
