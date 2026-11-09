@@ -62,3 +62,10 @@ it('sigue el tema elegido en el Host (data-theme); prefers-color-scheme solo com
     expect(styles).toContain(darkSelector)
   }
 })
+
+// jsdom does not apply CSS, so the unit tests cannot see that `display: flex` on a class overrides the
+// `hidden` attribute (found in a real browser: the closed suggestion list stayed on screen after Escape).
+it('una lista con atributo hidden no queda visible por el display de su clase', () => {
+  const form = readFileSync(resolve('src/sales/components/SaleForm.module.css'), 'utf8')
+  expect(form).toMatch(/\.lines\[hidden\]\s*\{[^}]*display:\s*none/)
+})
