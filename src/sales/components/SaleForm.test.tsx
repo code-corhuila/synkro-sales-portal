@@ -1,22 +1,28 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { customerFixture, deferred, failure, ids, pageOf, productFixture } from '../../test-doubles/fixtures'
 import { SaleForm } from './SaleForm'
 
-const productB = productFixture({ productId: ids.productB, name: 'Ratón óptico', priceCents: 5000 })
+const teclado = productFixture({ stock: 40 })
+const raton = productFixture({ productId: ids.productB, name: 'Ratón óptico', priceCents: 5000, stock: 3 })
+const agotado = productFixture({ productId: '550e8400-e29b-41d4-a716-4466554400ff', name: 'Cable HDMI', priceCents: 900, stock: 0 })
+const catalogue = [teclado, raton, agotado]
+const category = { categoryId: ids.category, name: 'Periféricos', active: true }
 
 function backend() {
   apiClient.request.mockImplementation(async (path, options) => {
+    const query = (options?.query ?? {}) as Record<string, unknown>
     if (path === '/api/v1/customers') {
-      const document = options?.query?.identityDocument
+      const document = query.identityDocument
       if (document === '1075123456') return pageOf([customerFixture()])
       if (document === '999') return pageOf([customerFixture({ active: false, name: 'Cliente Inactivo', identityDocument: '999' })])
       return pageOf([])
     }
+    if (path === '/api/v1/products/categories') return { data: [category], meta: { page: 1, limit: 100, total: 1, totalPages: 1 } }
     if (path === '/api/v1/products') {
-      const name = String(options?.query?.name).toLowerCase()
-      return pageOf([productFixture(), productB].filter((product) => product.name.toLowerCase().includes(name)))
+      const name = String(query.name ?? '').toLowerCase()
+      return pageOf(catalogue.filter((product) => product.name.toLowerCase().includes(name)))
     }
     throw new Error(`unexpected ${path}`)
   })
@@ -29,187 +35,177 @@ const setup = (props: Partial<React.ComponentProps<typeof SaleForm>> = {}) => {
   const view = render(<SaleForm pending={false} onSubmit={onSubmit} onClear={onClear} onDraftChange={onDraftChange} {...props} />)
   return { user, onSubmit, onClear, onDraftChange, ...view }
 }
-const line = (number: number) => screen.getByRole('group', { name: `Línea ${number}` })
+const customerBox = () => screen.getByRole('combobox', { name: /cliente/i })
+const cart = () => screen.getByRole('region', { name: 'Venta actual' })
+const tile = (name: string) => screen.findByRole('button', { name: new RegExp(`^Agregar ${name},`) })
 
 async function pickCustomer(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  await user.click(await screen.findByRole('button', { name: 'Seleccionar cliente' }))
+  await user.type(customerBox(), '1075123456')
+  await user.click(await screen.findByRole('option', { name: /Ana Pérez/ }))
 }
-async function pickProduct(user: ReturnType<typeof userEvent.setup>, number: number, term: string, option: string) {
-  const group = line(number)
-  await user.type(within(group).getByLabelText('Buscar producto'), term)
-  await user.click(within(group).getByRole('button', { name: 'Buscar producto' }))
-  await user.selectOptions(await within(group).findByLabelText('Producto'), { 'Teclado mecánico': ids.productA, 'Ratón óptico': ids.productB }[option]!)
+async function click(user: ReturnType<typeof userEvent.setup>, name: string, times = 1) {
+  const button = await tile(name)
+  for (let i = 0; i < times; i += 1) await user.click(button)
 }
 
 beforeEach(() => { apiClient.request.mockReset(); backend() })
 
-it('inicia con selector de cliente, una línea vacía y sin consultar catálogos', () => {
+it('inicia con selector de cliente, catálogo, carrito vacío y la venta sin líneas', async () => {
   setup()
-  expect(screen.getByLabelText('Documento del cliente')).toBeVisible()
-  expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(1)
+  expect(customerBox()).toBeVisible()
+  expect(await tile('Teclado mecánico')).toBeVisible()
+  expect(within(cart()).getByText(/Aún no hay productos/)).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Agregar línea' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Registrar venta' })).toBeEnabled()
-  expect(screen.getByRole('button', { name: 'Quitar línea 1' })).toBeDisabled()
-  expect(apiClient.request).not.toHaveBeenCalled()
 })
 
-it('valida junto a cada campo, enfoca el primer error y no llama al backend ni a onSubmit', async () => {
+it('valida cliente y carrito vacío, enfoca el primer error y no llama a onSubmit', async () => {
   const { user, onSubmit } = setup()
+  await tile('Teclado mecánico')
   await user.click(screen.getByRole('button', { name: 'Registrar venta' }))
   expect(screen.getByText('Selecciona un cliente.')).toBeVisible()
-  expect(within(line(1)).getByText('Selecciona un producto.')).toBeVisible()
-  expect(within(line(1)).getByText('Ingresa una cantidad entera mayor que cero.')).toBeVisible()
-  expect(screen.getByLabelText('Documento del cliente')).toHaveFocus()
-  expect(screen.getByLabelText('Documento del cliente')).toBeInvalid()
+  expect(screen.getByText('Agrega al menos una línea.')).toBeVisible()
+  expect(customerBox()).toHaveFocus()
+  expect(customerBox()).toBeInvalid()
   expect(onSubmit).not.toHaveBeenCalled()
-  expect(apiClient.request).not.toHaveBeenCalled()
 })
 
-it('busca el cliente por documento exacto y solo permite seleccionar uno activo', async () => {
+it('un clic agrega una unidad y los clics repetidos incrementan la misma entrada', async () => {
   const { user } = setup()
-  await user.type(screen.getByLabelText('Documento del cliente'), '999')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  expect(await screen.findByText(/Cliente Inactivo/)).toBeVisible()
-  expect(screen.getByText(/está inactivo/)).toBeVisible()
-  expect(screen.queryByRole('button', { name: 'Seleccionar cliente' })).toBeNull()
-  expect(apiClient.request).toHaveBeenCalledWith('/api/v1/customers', expect.objectContaining({ query: { identityDocument: '999', page: 1, limit: 5 } }))
+  await click(user, 'Teclado mecánico', 3)
+  expect(within(cart()).getAllByRole('listitem')).toHaveLength(1)
+  expect(within(cart()).getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('3')
+  expect(within(cart()).getByLabelText('Subtotal de Teclado mecánico')).toHaveTextContent(/376,50/)
 })
 
-it('informa cuando no existe el documento y permite cambiar el cliente elegido', async () => {
+it('confirma cada alta en una región de estado accesible', async () => {
   const { user } = setup()
-  await user.type(screen.getByLabelText('Documento del cliente'), '000')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  expect(await screen.findByText('No se encontró un cliente con ese documento.')).toBeVisible()
-  await user.clear(screen.getByLabelText('Documento del cliente'))
-  await pickCustomer(user)
-  expect(screen.getByText('Ana Pérez')).toBeVisible()
-  expect(screen.getByText(/1075123456/)).toBeVisible()
-  await user.click(screen.getByRole('button', { name: 'Cambiar cliente' }))
-  expect(screen.getByLabelText('Documento del cliente')).toBeVisible()
+  await click(user, 'Teclado mecánico')
+  await waitFor(() => expect(screen.getAllByRole('status').some((node) => /Teclado mecánico agregado\. En la venta: 1\./.test(node.textContent ?? ''))).toBe(true))
 })
 
-it('muestra un error de búsqueda de cliente en español sin texto crudo y conserva el documento', async () => {
-  apiClient.request.mockRejectedValueOnce(failure(0, 'NETWORK_ERROR'))
-  const { user } = setup()
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo buscar el cliente.')
-  expect(screen.queryByText(/Raw English/)).toBeNull()
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('1075123456')
+it('un producto agotado no puede agregarse', async () => {
+  setup()
+  const out = await tile('Cable HDMI')
+  expect(out).toBeDisabled()
+  expect(out).toHaveAccessibleName(/Agotado/)
+  expect(within(cart()).queryByRole('listitem')).toBeNull()
 })
 
-it('busca productos por nombre acotado, calcula subtotal y total estimado con precios de catálogo', async () => {
+it('muestra "Quedan N" para stock bajo y bloquea cantidades sobre el stock observado', async () => {
   const { user } = setup()
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
-  expect(apiClient.request).toHaveBeenCalledWith('/api/v1/products', expect.objectContaining({ query: { name: 'teclado', active: true, page: 1, limit: 10 } }))
-  await user.type(within(line(1)).getByLabelText('Cantidad'), '2')
-  expect(within(line(1)).getByText(/251,00/)).toBeVisible()
-  expect(screen.getByText('Total estimado (referencial)')).toBeVisible()
+  expect(await tile('Ratón óptico')).toHaveAccessibleName(/Quedan 3/)
+  await click(user, 'Ratón óptico', 4)
+  expect(within(cart()).getByLabelText('Cantidad de Ratón óptico')).toHaveValue('3')
+  await waitFor(() => expect(screen.getAllByRole('status').some((node) => /Solo hay 3 unidades disponibles\./.test(node.textContent ?? ''))).toBe(true))
+})
+
+it('los controles menos, más, cantidad y quitar actualizan subtotal y total estimado al instante', async () => {
+  const { user } = setup()
+  await click(user, 'Teclado mecánico')
+  const row = within(cart())
+  await user.click(row.getByRole('button', { name: 'Agregar una unidad de Teclado mecánico' }))
+  expect(row.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('2')
   expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent(/251,00/)
+  await user.clear(row.getByLabelText('Cantidad de Teclado mecánico'))
+  await user.type(row.getByLabelText('Cantidad de Teclado mecánico'), '4')
+  expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent(/502,00/)
+  await user.click(row.getByRole('button', { name: 'Quitar una unidad de Teclado mecánico' }))
+  expect(row.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('3')
+  await user.click(row.getByRole('button', { name: 'Quitar Teclado mecánico de la venta' }))
+  expect(row.queryByRole('listitem')).toBeNull()
+  expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent('—')
   expect(screen.getByText(/No es el total de la venta/)).toBeVisible()
 })
 
-it('no muestra total estimado hasta que todas las líneas son confiables', async () => {
+it('restar desde una unidad elimina la entrada', async () => {
   const { user } = setup()
-  await user.click(screen.getByRole('button', { name: 'Agregar línea' }))
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
-  await user.type(within(line(1)).getByLabelText('Cantidad'), '1')
-  expect(screen.getByText('Total estimado (referencial)').parentElement).toHaveTextContent('—')
+  await click(user, 'Teclado mecánico')
+  await user.click(within(cart()).getByRole('button', { name: 'Quitar una unidad de Teclado mecánico' }))
+  expect(within(cart()).queryByRole('listitem')).toBeNull()
 })
 
-it('agrega y quita líneas, y bloquea agregar la línea 101', async () => {
+it('el filtro consulta el servicio por nombre y las categorías vienen de la API', async () => {
   const { user } = setup()
-  await user.click(screen.getByRole('button', { name: 'Agregar línea' }))
-  expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(2)
-  await user.click(screen.getByRole('button', { name: 'Quitar línea 2' }))
-  expect(screen.getAllByRole('group', { name: /^Línea/ })).toHaveLength(1)
-  const add = screen.getByRole('button', { name: 'Agregar línea' })
-  for (let i = 0; i < 99; i += 1) fireEvent.click(add)
-  expect(document.querySelectorAll('fieldset[aria-label^="Línea"]')).toHaveLength(100)
-  expect(add).toBeDisabled()
-  expect(screen.getByText('Una venta admite hasta 100 líneas.')).toBeVisible()
-}, 30000)
+  await tile('Teclado mecánico')
+  expect(await screen.findByRole('button', { name: 'Periféricos' })).toHaveAttribute('aria-pressed', 'false')
+  await user.type(screen.getByLabelText('Buscar producto'), 'rat')
+  await waitFor(() => expect(apiClient.request).toHaveBeenCalledWith('/api/v1/products', expect.objectContaining({ query: expect.objectContaining({ name: 'rat', active: true, limit: 24 }) })))
+  expect(await tile('Ratón óptico')).toBeVisible()
+  await waitFor(() => expect(screen.queryByRole('button', { name: /^Agregar Teclado/ })).toBeNull())
+  await user.click(screen.getByRole('button', { name: 'Periféricos' }))
+  await waitFor(() => expect(apiClient.request).toHaveBeenCalledWith('/api/v1/products', expect.objectContaining({ query: expect.objectContaining({ categoryId: ids.category }) })))
+})
 
-it('rechaza cantidades cero o negativas junto al campo', async () => {
-  const { user, onSubmit } = setup()
+it('un error del catálogo ofrece reintento en español', async () => {
+  apiClient.request.mockImplementation(async (path) => {
+    if (path === '/api/v1/products') throw failure(500)
+    return { data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } }
+  })
+  const { user } = setup()
+  expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cargar el catálogo.')
+  expect(screen.queryByText(/Raw English/)).toBeNull()
+  backend()
+  await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+  expect(await tile('Teclado mecánico')).toBeVisible()
+})
+
+it('tras elegir el cliente el foco pasa al filtro del catálogo y se puede cambiar de cliente', async () => {
+  const { user } = setup()
+  await tile('Teclado mecánico')
   await pickCustomer(user)
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
-  const quantity = within(line(1)).getByLabelText('Cantidad')
-  await user.type(quantity, '0')
-  await user.click(screen.getByRole('button', { name: 'Registrar venta' }))
-  expect(within(line(1)).getByText('Ingresa una cantidad entera mayor que cero.')).toBeVisible()
-  expect(quantity).toHaveFocus()
-  await user.clear(quantity)
-  await user.type(quantity, '-3')
-  await user.click(screen.getByRole('button', { name: 'Registrar venta' }))
-  expect(within(line(1)).getByText('Ingresa una cantidad entera mayor que cero.')).toBeVisible()
-  expect(onSubmit).not.toHaveBeenCalled()
+  await waitFor(() => expect(screen.getByLabelText('Buscar producto')).toHaveFocus())
+  expect(screen.getByText('Ana Pérez')).toBeVisible()
+  expect(screen.getByText(/1075123456/)).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Cambiar cliente' }))
+  expect(customerBox()).toBeVisible()
 })
 
-it('entrega solo cliente y líneas válidas y notifica el borrador vigente', async () => {
+it('entrega solo cliente y líneas válidas (sin precios) y notifica el borrador vigente', async () => {
   const { user, onSubmit, onDraftChange } = setup()
   await pickCustomer(user)
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
-  await user.type(within(line(1)).getByLabelText('Cantidad'), '2')
+  await click(user, 'Teclado mecánico', 2)
   await user.click(screen.getByRole('button', { name: 'Registrar venta' }))
   const request = { customerId: ids.customer, lines: [{ productId: ids.productA, quantity: 2 }] }
   expect(onSubmit).toHaveBeenCalledWith(request)
   expect(onDraftChange).toHaveBeenLastCalledWith(request)
 })
 
-it('rechaza el mismo producto en dos líneas', async () => {
-  const { user, onSubmit } = setup()
-  await pickCustomer(user)
-  await user.click(screen.getByRole('button', { name: 'Agregar línea' }))
-  for (const number of [1, 2]) {
-    await pickProduct(user, number, 'teclado', 'Teclado mecánico')
-    await user.type(within(line(number)).getByLabelText('Cantidad'), '1')
-  }
-  await user.click(screen.getByRole('button', { name: 'Registrar venta' }))
-  expect(within(line(2)).getByText('Este producto ya está en otra línea.')).toBeVisible()
-  expect(onSubmit).not.toHaveBeenCalled()
-})
-
-it('pendiente: deshabilita el envío y los campos, y anuncia el progreso', () => {
+it('pendiente: deshabilita el envío, el carrito y el catálogo', async () => {
   setup({ pending: true })
   expect(screen.getByRole('button', { name: /Registrando venta/ })).toBeDisabled()
-  expect(screen.getByLabelText('Documento del cliente')).toBeDisabled()
-  expect(screen.getByRole('button', { name: 'Agregar línea' })).toBeDisabled()
+  expect(customerBox()).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Limpiar' })).toBeDisabled()
+  expect(await tile('Teclado mecánico')).toBeDisabled()
 })
 
 it('conserva cliente, productos y cantidades al volver de pendiente (rechazo de negocio)', async () => {
   const { user, rerender, onSubmit, onClear, onDraftChange } = setup()
   await pickCustomer(user)
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
-  await user.type(within(line(1)).getByLabelText('Cantidad'), '5')
+  await click(user, 'Teclado mecánico', 5)
   rerender(<SaleForm pending onSubmit={onSubmit} onClear={onClear} onDraftChange={onDraftChange} />)
   rerender(<SaleForm pending={false} onSubmit={onSubmit} onClear={onClear} onDraftChange={onDraftChange} />)
   expect(screen.getByText('Ana Pérez')).toBeVisible()
-  expect(within(line(1)).getByLabelText('Cantidad')).toHaveValue('5')
-  expect(within(line(1)).getByLabelText('Producto')).toHaveValue(ids.productA)
+  expect(within(cart()).getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('5')
 })
 
 it('Limpiar restablece el formulario y avisa al padre', async () => {
   const { user, onClear } = setup()
   await pickCustomer(user)
-  await pickProduct(user, 1, 'teclado', 'Teclado mecánico')
+  await click(user, 'Teclado mecánico')
   await user.click(screen.getByRole('button', { name: 'Limpiar' }))
   expect(onClear).toHaveBeenCalledTimes(1)
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('')
-  expect(within(line(1)).queryByLabelText('Producto')).toBeNull()
+  expect(customerBox()).toHaveValue('')
+  expect(within(cart()).queryByRole('listitem')).toBeNull()
 })
 
-it('cancela la búsqueda pendiente al desmontar', async () => {
+it('cancela las consultas pendientes al desmontar', async () => {
   const slow = deferred<unknown>()
   const signals: AbortSignal[] = []
   apiClient.request.mockImplementation((_path, options) => { signals.push(options!.signal!); return slow.promise })
-  const { user, unmount } = setup()
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  await waitFor(() => expect(signals).toHaveLength(1))
+  const { unmount } = setup()
+  await waitFor(() => expect(signals.length).toBeGreaterThan(0))
   unmount()
-  expect(signals[0].aborted).toBe(true)
-  slow.resolve(pageOf([customerFixture()]))
+  expect(signals.every((signal) => signal.aborted)).toBe(true)
+  slow.resolve(pageOf([]))
 })

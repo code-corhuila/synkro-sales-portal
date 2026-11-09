@@ -19,3 +19,12 @@ export async function findCustomersByDocument(identityDocument: string, { signal
 export async function getCustomer(customerId: string, { signal }: Options = {}): Promise<Customer> {
   return apiClient.request<Customer>(`/api/v1/customers/${pathId(customerId)}`, { signal })
 }
+
+export const CUSTOMER_SEARCH_LIMIT = 5
+
+// Customers-side contract pending (HU-CLI-05, #304): a bounded name-or-document search with a body, so
+// the search text never travels in a URL. Until it is delivered the only documented lookup is the exact
+// document filter, so a term is answered with that and nothing else. This must not invent an endpoint.
+export async function searchCustomers(term: string, options: Options = {}): Promise<Customer[]> {
+  return (await findCustomersByDocument(term, options)).slice(0, CUSTOMER_SEARCH_LIMIT)
+}
