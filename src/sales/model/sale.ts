@@ -10,6 +10,8 @@ export interface SaleDetail {
 
 export interface Sale {
   saleId: string
+  // VEN-YYYY-NNNNNN. Absent on a sale stored without one: the browser never makes one up.
+  commercialNumber?: string
   customerId: string
   createdBy: string
   date: string

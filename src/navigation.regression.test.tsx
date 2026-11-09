@@ -68,7 +68,7 @@ it('no vuelve a pedir datos ni remonta al volver al historial, y el detalle se p
   const field = screen.getByLabelText('Cliente (documento)')
   expect(calls('/api/v1/sales')).toBe(1)
   await user.click(screen.getByRole('link', { name: `Ver venta ${ids.sale}` }))
-  await screen.findByText('Ana Pérez')
+  await screen.findAllByText('Ana Pérez')
   expect(calls(`/api/v1/sales/${ids.sale}`)).toBe(1)
   await user.click(screen.getByRole('link', { name: 'Volver al historial' }))
   await screen.findByRole('heading', { name: 'Ventas' })
