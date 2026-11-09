@@ -34,7 +34,7 @@ it('el código de producción solo importa capacidades compartidas sin transport
   expect(source).not.toMatch(/\bfetch\s*\(|axios|localStorage|Bearer|Authorization|eyJ[\w-]+\.[\w-]+\.[\w-]+|:8000/)
   const storageUsers = files('src').filter((file) => /\.(ts|tsx)$/.test(file) && !/test|\.d\.ts$/.test(file))
     .filter((file) => /sessionStorage/.test(readFileSync(file, 'utf8')))
-  expect(storageUsers.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/model/intentJournal.ts'])
+  expect(storageUsers.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/model/draftJournal.ts', 'sales/model/intentJournal.ts'])
 })
 it('sigue el tema elegido en el Host (data-theme); prefers-color-scheme solo como fallback transitorio', () => {
   expect(styles).toContain(":root[data-theme='dark']")

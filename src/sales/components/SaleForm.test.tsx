@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
-import { customerFixture, deferred, failure, ids, pageOf, productFixture } from '../../test-doubles/fixtures'
+import { deferred, failure, ids, pageOf, productFixture } from '../../test-doubles/fixtures'
 import { SaleForm } from './SaleForm'
 
 const teclado = productFixture({ stock: 40 })
@@ -13,11 +13,10 @@ const category = { categoryId: ids.category, name: 'Periféricos', active: true 
 function backend() {
   apiClient.request.mockImplementation(async (path, options) => {
     const query = (options?.query ?? {}) as Record<string, unknown>
-    if (path === '/api/v1/customers') {
-      const document = query.identityDocument
-      if (document === '1075123456') return pageOf([customerFixture()])
-      if (document === '999') return pageOf([customerFixture({ active: false, name: 'Cliente Inactivo', identityDocument: '999' })])
-      return pageOf([])
+    if (path === '/api/v1/customers/search') {
+      const text = String((options?.body as { query?: string } | undefined)?.query ?? '')
+      if (text === '1075123456') return { data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } }
+      return { data: [], meta: { limit: 5, hasMore: false } }
     }
     if (path === '/api/v1/products/categories') return { data: [category], meta: { page: 1, limit: 100, total: 1, totalPages: 1 } }
     if (path === '/api/v1/products') {
