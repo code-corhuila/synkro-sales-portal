@@ -283,3 +283,20 @@ Limits remain explicit: the selected Sales API hides annulled sales with 404, so
 by unit tests rather than claimed as a real annulled-sale download. Customer/product descriptions are current
 when available, not historical snapshots. The supplied logo asset and Latin font coverage are unchanged.
 No fiscal validation, electronic invoice integration, promotion, issue closure or synkro-docs update is included.
+
+## HU-VEN-20: commercial number and issuer data
+
+* **Schema 1.2** ([`schemas/sale-document-1.2.xsd`](schemas/sale-document-1.2.xsd), namespace
+  `urn:synkro:sales:sale-document:1.2`) adds the optional `<commercialNumber>` (`VEN-YYYY-NNNNNN`) right after
+  `<saleId>`. It is the commercial reference assigned by the Sales service, not a fiscal consecutive: it can have gaps and
+  carries no tax validity. A sale stored without a number is exported without the element; the browser never makes one up.
+  The 1.0 and 1.1 schemas stay in the repository.
+* The PDF title, the continuation header and the footer use the commercial number when the sale has one; the full
+  `saleId` stays in the footer as the internal reference. Without a number the title falls back to the `saleId`.
+* Issuer: `VITE_ISSUER_*` are compiled into the image. The compose defaults use `:-`, so an empty variable can no longer blank the
+  confirmed legal name or NIT. Changing a value requires rebuilding the image; editing `.env` alone does not change
+  documents already served. The phone number was supplied by the owner on 2026-11-08 and is not independently
+  confirmed.
+* The history shows the customer's **current** name and document (Customers is the source; there is no snapshot of
+  the sale date), reading each distinct customer once with at most four requests in flight. A customer that cannot be
+  read is shown as "Datos del cliente no disponibles".

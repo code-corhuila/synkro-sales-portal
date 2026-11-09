@@ -26,7 +26,7 @@ it('el emisor no tiene valores de ejemplo en el código de producción', () => {
 })
 
 it('el esquema publicado coincide con la versión que el código declara', () => {
-  const xsd = readFileSync(resolve('docs/schemas/sale-document-1.1.xsd'), 'utf8')
-  expect(xsd).toContain('urn:synkro:sales:sale-document:1.1')
-  expect(source).toContain('urn:synkro:sales:sale-document:1.1')
+  const xsd = readFileSync(resolve('docs/schemas/sale-document-1.2.xsd'), 'utf8')
+  expect(xsd).toContain('urn:synkro:sales:sale-document:1.2')
+  expect(source).toContain('urn:synkro:sales:sale-document:1.2')
 })
