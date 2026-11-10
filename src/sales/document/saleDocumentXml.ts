@@ -2,8 +2,8 @@ import { assertRenderable } from './assertRenderable'
 import { sanitizeText } from './text'
 import type { SaleDocument } from './types'
 
-// Commercial XML, schema version 1.1 (docs/schemas/sale-document-1.1.xsd). It is not a fiscal document.
-export const SALE_DOCUMENT_NAMESPACE = 'urn:synkro:sales:sale-document:1.1'
+// Commercial XML, schema version 1.2 (docs/schemas/sale-document-1.2.xsd). It is not a fiscal document.
+export const SALE_DOCUMENT_NAMESPACE = 'urn:synkro:sales:sale-document:1.2'
 
 // All text goes through the same sanitizer as the PDF (characters XML 1.0 cannot carry become U+FFFD) and is
 // then escaped for both text and attribute positions. Nothing is concatenated without passing through here.
@@ -38,6 +38,7 @@ export function buildSaleDocumentXml(document: SaleDocument): string {
     element(1, 'documentType', document.documentType),
     element(1, 'fiscalValidity', 'NONE'),
     element(1, 'saleId', document.saleId),
+    ...optional(1, 'commercialNumber', document.commercialNumber),
     element(1, 'status', document.status),
     element(1, 'saleDate', document.saleDate),
     element(1, 'generatedAt', document.generatedAt),

@@ -35,16 +35,24 @@ it('loading conserva encabezado y filtros, anuncia y muestra filas skeleton sin 
 })
 it.each(['ADMIN', 'SALESPERSON'])('data %s usa respuesta y total autoritativo', async (role) => {
   session.user.mockReturnValue({ sub: 'identity', role })
+  apiClient.request.mockImplementation((path) => Promise.resolve(path.startsWith('/api/v1/customers/')
+    ? { customerId: customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true } : page()))
   render(<SalesPage />)
   const table = await ready()
-  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Fecha', 'Cliente', 'Líneas', 'Total', 'Acciones'])
-  expect(screen.getByText(customer)).toBeVisible()
+  expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Número', 'Fecha', 'Cliente', 'Líneas', 'Total', 'Acciones'])
+  // The history shows who bought, never the customer's UUID.
+  expect(await screen.findByText('Ana Pérez')).toBeVisible()
+  expect(screen.getByText(/1075123456/)).toBeVisible()
+  expect(screen.queryByText(customer)).toBeNull()
+  expect(screen.getByText('Sin consecutivo')).toBeVisible()
   expect(screen.getByText(/1\.234\.567,89/)).toBeVisible()
   expect(screen.getByText(/11.*2026/)).toBeVisible()
   expect(screen.getByRole('link', { name: `Ver venta ${sale.saleId}` })).toHaveAttribute('href', `/sales/${sale.saleId}`)
   expect(screen.queryByText(/estará disponible en una próxima entrega/)).toBeNull()
-  // Opening /sales still asks only for the history: the form never preloads Customers or Products.
-  expect(apiClient.request.mock.calls.every(([path]) => path === '/api/v1/sales')).toBe(true)
+  // Opening /sales asks for the history and for each distinct customer of the page once; the form
+  // never preloads Customers (the catalogue is replaced by a stub in this file).
+  const others = apiClient.request.mock.calls.map(([path]) => path).filter((path) => path !== '/api/v1/sales')
+  expect(others).toEqual([`/api/v1/customers/${customer}`])
   expect(session.user).toHaveBeenCalled()
 })
 it('error y retry conservan filtros y página e incluyen trace sin mensaje inglés', async () => {
