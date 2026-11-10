@@ -1,4 +1,5 @@
 import type { CustomerChoice } from './customer'
+import { isUuid } from './identifier'
 import type { Product } from './product'
 
 export const MAX_LINES = 100
@@ -81,4 +82,28 @@ export function estimateTotal({ lines }: SaleDraft): number | null {
 export function intentFingerprint({ customerId, lines }: RegisterSaleRequest): string {
   const sorted = lines.map(({ productId, quantity }) => [productId, quantity] as const).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
   return JSON.stringify([customerId, sorted])
+}
+
+// The inverse of intentFingerprint: the exact request an unconfirmed attempt carried. Anything that
+// is not a well-formed fingerprint is refused, so a damaged record can never become a request.
+export function requestFromFingerprint(fingerprint: string): RegisterSaleRequest | null {
+  try {
+    const parsed: unknown = JSON.parse(fingerprint)
+    if (!Array.isArray(parsed) || parsed.length !== 2) return null
+    const [customerId, entries] = parsed as [unknown, unknown]
+    if (typeof customerId !== 'string' || !isUuid(customerId) || !Array.isArray(entries) || !entries.length || entries.length > MAX_LINES) return null
+    const seen = new Set<string>()
+    const lines: RegisterSaleRequest['lines'] = []
+    for (const entry of entries) {
+      if (!Array.isArray(entry) || entry.length !== 2) return null
+      const [productId, quantity] = entry as [unknown, unknown]
+      if (typeof productId !== 'string' || !isUuid(productId) || seen.has(productId)) return null
+      if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity) || quantity < 1) return null
+      seen.add(productId)
+      lines.push({ productId, quantity })
+    }
+    return { customerId, lines }
+  } catch {
+    return null
+  }
 }

@@ -75,4 +75,6 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .total { background: var(--color-bg-page); }
 }
+.notices { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.notices:empty { display: none; }
 .lines[hidden] { display: none; }
