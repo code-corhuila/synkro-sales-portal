@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { addProduct, decrementLine, removeLine, setLineQuantity } from '../model/cart'
 import { formatCents } from '../model/formatting'
-import type { Customer } from '../model/customer'
+import type { CustomerChoice } from '../model/customer'
 import type { Product } from '../model/product'
 import {
   buildRegisterRequest, estimateTotal, validateSaleForm,
@@ -53,7 +53,7 @@ export function SaleForm({ pending, blockedReason, onSubmit, onClear, onDraftCha
   function add(product: Product) {
     changeLines(addProduct(draft.lines, product), (lines) => `${product.name} agregado. En la venta: ${quantityOf(lines, product.productId)}.`)
   }
-  function selectCustomer(customer: Customer | null) {
+  function selectCustomer(customer: CustomerChoice | null) {
     setDraft((current) => ({ ...current, customer }))
     // Next step of the flow is choosing products.
     if (customer) queueMicrotask(() => filter.current?.focus())

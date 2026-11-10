@@ -75,3 +75,4 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .total { background: var(--color-bg-page); }
 }
+.lines[hidden] { display: none; }
