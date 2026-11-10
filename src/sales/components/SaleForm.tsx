@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { addProduct, decrementLine, removeLine, setLineQuantity } from '../model/cart'
 import { formatCents } from '../model/formatting'
+import type { Customer } from '../model/customer'
+import type { Product } from '../model/product'
 import {
-  MAX_LINES, buildRegisterRequest, estimateTotal, newLine, validateSaleForm,
-  type FormErrors, type RegisterSaleRequest, type SaleDraft,
+  buildRegisterRequest, estimateTotal, validateSaleForm,
+  type FormErrors, type LineDraft, type RegisterSaleRequest, type SaleDraft,
 } from '../model/saleForm'
 import { Button } from './Button'
+import catalogue from './Catalogue.module.css'
 import { CustomerPicker } from './CustomerPicker'
-import { SaleLineRow } from './SaleLineRow'
+import { ProductCatalogue } from './ProductCatalogue'
+import { SaleCart } from './SaleCart'
 import styles from './SaleForm.module.css'
 
 interface Props {
@@ -18,14 +23,18 @@ interface Props {
   onDraftChange?: (request: RegisterSaleRequest | null) => void
 }
 
-const emptyDraft = (): SaleDraft => ({ customer: null, lines: [newLine()] })
+const emptyDraft = (): SaleDraft => ({ customer: null, lines: [] })
+
+const quantityOf = (lines: LineDraft[], productId: string) => lines.find((line) => line.product?.productId === productId)?.quantity ?? '0'
 
 export function SaleForm({ pending, blockedReason, onSubmit, onClear, onDraftChange }: Props) {
   const [draft, setDraft] = useState<SaleDraft>(emptyDraft)
   const [generation, setGeneration] = useState(0)
   const [showErrors, setShowErrors] = useState(false)
   const [focusRequest, setFocusRequest] = useState(0)
+  const [announcement, setAnnouncement] = useState('')
   const form = useRef<HTMLFormElement>(null)
+  const filter = useRef<HTMLInputElement>(null)
   const notify = useRef(onDraftChange)
   useEffect(() => { notify.current = onDraftChange })
   useEffect(() => { notify.current?.(buildRegisterRequest(draft)) }, [draft])
@@ -36,8 +45,19 @@ export function SaleForm({ pending, blockedReason, onSubmit, onClear, onDraftCha
   const result: FormErrors = validateSaleForm(draft)
   const visible = showErrors ? result : null
   const total = estimateTotal(draft)
-  const atLimit = draft.lines.length >= MAX_LINES
 
+  function changeLines(next: { lines: LineDraft[]; notice?: string }, confirmation?: (lines: LineDraft[]) => string) {
+    setDraft((current) => ({ ...current, lines: next.lines }))
+    setAnnouncement(next.notice ?? confirmation?.(next.lines) ?? '')
+  }
+  function add(product: Product) {
+    changeLines(addProduct(draft.lines, product), (lines) => `${product.name} agregado. En la venta: ${quantityOf(lines, product.productId)}.`)
+  }
+  function selectCustomer(customer: Customer | null) {
+    setDraft((current) => ({ ...current, customer }))
+    // Next step of the flow is choosing products.
+    if (customer) queueMicrotask(() => filter.current?.focus())
+  }
   function submit() {
     setShowErrors(true)
     const request = buildRegisterRequest(draft)
@@ -47,26 +67,25 @@ export function SaleForm({ pending, blockedReason, onSubmit, onClear, onDraftCha
   function clear() {
     setDraft(emptyDraft())
     setShowErrors(false)
+    setAnnouncement('')
     setGeneration((value) => value + 1)
     onClear()
   }
+  const busy = pending
 
   return <form ref={form} aria-label="Formulario de nueva venta" noValidate className={styles.form}
     onSubmit={(event) => { event.preventDefault(); if (!pending && !blockedReason) submit() }}>
-    <fieldset className={styles.fieldset} disabled={pending}>
-      <CustomerPicker key={`customer-${generation}`} customer={draft.customer} error={visible?.customer}
-        onSelect={(customer) => setDraft({ ...draft, customer })} />
-      <ol className={styles.lines} aria-label="Líneas de la venta">
-        {draft.lines.map((line, index) => <li key={`${generation}-${line.id}`}>
-          <SaleLineRow number={index + 1} line={line} errors={visible?.lines[line.id]} canRemove={draft.lines.length > 1}
-            onChange={(next) => setDraft({ ...draft, lines: draft.lines.map((item) => (item.id === line.id ? next : item)) })}
-            onRemove={() => setDraft({ ...draft, lines: draft.lines.filter((item) => item.id !== line.id) })} />
-        </li>)}
-      </ol>
-      <div className={styles.actions}>
-        <Button variant="secondary" onClick={() => setDraft({ ...draft, lines: [...draft.lines, newLine()] })} disabled={atLimit}>Agregar línea</Button>
+    <fieldset className={styles.fieldset} disabled={busy}>
+      <CustomerPicker key={`customer-${generation}`} customer={draft.customer} error={visible?.customer} onSelect={selectCustomer} />
+      <div className={catalogue.layout}>
+        <ProductCatalogue key={`catalogue-${generation}`} disabled={busy} onAdd={add} filterRef={filter} announcement={announcement} />
+        <SaleCart lines={draft.lines} errors={visible?.lines} disabled={busy}
+          onIncrement={(line) => { if (line.product) changeLines(addProduct(draft.lines, line.product)) }}
+          onDecrement={(id) => changeLines({ lines: decrementLine(draft.lines, id) })}
+          onQuantity={(id, text) => changeLines(setLineQuantity(draft.lines, id, text))}
+          onRemove={(id) => changeLines({ lines: removeLine(draft.lines, id) })} />
       </div>
-      {(atLimit || visible?.form) && <p className={visible?.form ? styles.errorNote : styles.note}>{visible?.form ?? 'Una venta admite hasta 100 líneas.'}</p>}
+      {visible?.form && <p className={styles.errorNote}>{visible.form}</p>}
     </fieldset>
     <div className={styles.footer}>
       <p className={styles.total}>
