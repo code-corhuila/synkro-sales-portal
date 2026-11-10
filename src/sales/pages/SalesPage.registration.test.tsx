@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
-import { ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
+import { customerFixture, ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
 import { redirectToSales } from '../../navigation'
 import { SalesPage } from './SalesPage'
 
@@ -18,6 +18,8 @@ beforeEach(() => {
       return Promise.resolve({ data: listed > 1 ? [saleFixture()] : [], meta: { page: 1, limit: 20, total: listed > 1 ? 1 : 0, totalPages: listed > 1 ? 1 : 0 } })
     }
     if (path === '/api/v1/customers/search') return Promise.resolve({ data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } })
+    if (path === `/api/v1/customers/${ids.customer}`) return Promise.resolve(customerFixture())
+    if (path.startsWith('/api/v1/products/') && path !== '/api/v1/products/categories') return Promise.resolve(productFixture())
     if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === '/api/v1/sagas/register-sale') return Promise.resolve(completed)
