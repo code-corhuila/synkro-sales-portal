@@ -36,7 +36,13 @@ export function validateSaleForm({ customer, lines }: SaleDraft): FormErrors {
     if (!line.product) lineErrors.product = 'Selecciona un producto.'
     else if (seen.has(line.product.productId)) lineErrors.product = 'Este producto ya está en otra línea.'
     else seen.add(line.product.productId)
-    if (parseQuantity(line.quantity) === null) lineErrors.quantity = 'Ingresa una cantidad entera mayor que cero.'
+    const quantity = parseQuantity(line.quantity)
+    if (quantity === null) lineErrors.quantity = 'Ingresa una cantidad entera mayor que cero.'
+    else if (line.product && quantity > Math.max(0, line.product.stock)) {
+      // Last observed stock only; the server's reservation still decides.
+      const stock = Math.max(0, line.product.stock)
+      lineErrors.quantity = `Solo hay ${stock} ${stock === 1 ? 'unidad disponible' : 'unidades disponibles'}.`
+    }
     if (lineErrors.product || lineErrors.quantity) { errors.lines[line.id] = lineErrors; fail() }
   }
   return errors
