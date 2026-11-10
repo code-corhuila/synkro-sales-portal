@@ -1,4 +1,4 @@
-import { buildRegisterRequest, estimateTotal, intentFingerprint, validateSaleForm, newLine, MAX_LINES, type SaleDraft } from './saleForm'
+import { buildRegisterRequest, estimateTotal, intentFingerprint, requestFromFingerprint, validateSaleForm, newLine, MAX_LINES, type SaleDraft } from './saleForm'
 import { customerFixture, ids, productFixture } from '../../test-doubles/fixtures'
 
 const customer = customerFixture()
@@ -98,5 +98,18 @@ describe('intentFingerprint', () => {
     const a = { productId: ids.productA, quantity: 1 }
     const b = { productId: ids.productB, quantity: 4 }
     expect(intentFingerprint({ customerId: ids.customer, lines: [a, b] })).toBe(intentFingerprint({ customerId: ids.customer, lines: [b, a] }))
+  })
+})
+
+describe('requestFromFingerprint', () => {
+  const sample = { customerId: ids.customer, lines: [{ productId: ids.productB, quantity: 3 }, { productId: ids.productA, quantity: 1 }] }
+  it('reconstruye exactamente la intención de una huella (sin importar el orden)', () => {
+    const rebuilt = requestFromFingerprint(intentFingerprint(sample))
+    expect(rebuilt).not.toBeNull()
+    expect(intentFingerprint(rebuilt!)).toBe(intentFingerprint(sample))
+    expect(rebuilt!.lines).toHaveLength(2)
+  })
+  it.each(['', '{no', '[]', '[1,2]', JSON.stringify(['x', []]), JSON.stringify([ids.customer, [['x', 1]]]), JSON.stringify([ids.customer, [[ids.productA, 0]]]), JSON.stringify([ids.customer, []]), JSON.stringify([ids.customer, [[ids.productA, 1], [ids.productA, 2]]])])('devuelve null para una huella inválida: %j', (fingerprint) => {
+    expect(requestFromFingerprint(fingerprint)).toBeNull()
   })
 })
