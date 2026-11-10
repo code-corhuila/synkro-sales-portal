@@ -18,7 +18,9 @@ beforeEach(() => {
     if (path === `/api/v1/sales/${ids.sale}`) return Promise.resolve(saleFixture())
     if (path === `/api/v1/sales/${other}`) return Promise.resolve(saleFixture({ saleId: other }))
     if (path.startsWith('/api/v1/customers')) return Promise.resolve(options?.query ? pageOf([customerFixture()]) : customerFixture())
-    if (path.startsWith('/api/v1/products')) return Promise.resolve(productFixture())
+    if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
+    if (path === '/api/v1/products') return Promise.resolve(pageOf([]))
+    if (path.startsWith('/api/v1/products/')) return Promise.resolve(productFixture())
     return Promise.reject(failure(404))
   })
   window.history.replaceState(null, '', '/sales')
@@ -130,7 +132,8 @@ it('navegación entre portales: otra ruta desmonta Sales y deja de consultar; vo
 })
 
 it('un 403 desde el detalle vuelve al historial con el aviso, aunque el historial ya estuviera montado', async () => {
-  apiClient.request.mockImplementation((path) => path === `/api/v1/sales/${other}` ? Promise.reject(failure(403, 'FORBIDDEN')) : Promise.resolve(path === '/api/v1/sales' ? { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } } : saleFixture()))
+  const empty = { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } }
+  apiClient.request.mockImplementation((path) => path.startsWith('/api/v1/products') ? Promise.resolve(empty) : path === `/api/v1/sales/${other}` ? Promise.reject(failure(403, 'FORBIDDEN')) : Promise.resolve(path === '/api/v1/sales' ? { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } } : saleFixture()))
   render(<App />)
   await screen.findByRole('heading', { name: 'Ventas' })
   act(() => navigateTo(`/sales/${other}`))
