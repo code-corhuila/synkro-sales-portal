@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getSale } from '../api/salesApi'
 import { getSaga, startRegisterSale } from '../api/workflowApi'
 import type { Saga } from '../model/saga'
 import { initialRegistration, isPending, registrationReducer, type RegistrationEvent, type RegistrationState, type SubmitFailureKind } from '../model/sagaMachine'
-import { intentFingerprint, type RegisterSaleRequest } from '../model/saleForm'
+import { intentFingerprint, requestFromFingerprint, type RegisterSaleRequest } from '../model/saleForm'
 import type { Sale } from '../model/sale'
 import { session } from 'shell/session'
 import { INTENT_TTL_MS, readIntent, recoveryOwner, removeIntent, writeIntent, type Intent } from '../model/intentJournal'
@@ -228,6 +228,12 @@ export function useRegisterSale({ onCompleted, active = true }: Options = {}) {
   // Derived, not stored: the authoritative sale is looked up once per confirmed saleId.
   const sale: SaleLookup = !completedSaleId ? { status: 'idle' } : lookup?.saleId === completedSaleId ? lookup.result : { status: 'loading' }
 
+  // An attempt that was sent (or may have been) is not a draft: while it is unresolved it keeps its
+  // exact lines and its idempotency key, so the screen shows it read-only instead of an editable sale.
+  const locked = state.phase === 'submitting' || state.phase === 'running' || state.phase === 'unresolved' || state.phase === 'failed'
+    || (state.phase === 'submit-failed' && state.kind === 'uncertain')
+  const attempt = useMemo(() => (locked && submitted ? requestFromFingerprint(submitted) : null), [locked, submitted])
+
   const blockedReason = !recovery.owner || sessionChanged
     ? 'No se puede registrar la venta con esta versión de SynkroTech. Contacta a un administrador.'
     : storageError ? 'No se pudo guardar la recuperación de la venta. Revisa el almacenamiento antes de continuar.'
@@ -242,7 +248,7 @@ export function useRegisterSale({ onCompleted, active = true }: Options = {}) {
       : undefined
 
   return {
-    state, sale, pending: isPending(state), blockedReason,
+    state, sale, pending: isPending(state), blockedReason, attempt,
     submit, resume, clear, dismiss: reset,
     trackDraft: useCallback((request: RegisterSaleRequest | null) => setDraft(request ? intentFingerprint(request) : null), []),
   }

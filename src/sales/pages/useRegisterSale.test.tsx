@@ -292,3 +292,52 @@ describe('seguimiento de la saga', () => {
     expect(result.current.state.phase).toBe('idle')
   })
 })
+
+describe('intento enviado (attempt)', () => {
+  it('no hay intento antes de enviar ni después de un rechazo definitivo', async () => {
+    postReplies = [failure(422, 'VALIDATION_ERROR')]
+    const { result } = setup()
+    expect(result.current.attempt).toBeNull()
+    act(() => result.current.submit(request))
+    await flush()
+    expect(result.current.state).toMatchObject({ phase: 'submit-failed', kind: 'rejected' })
+    expect(result.current.attempt).toBeNull()
+  })
+  it('un envío incierto deja el intento exacto, también tras recargar (se lee del diario)', async () => {
+    postReplies = [failure(0, 'NETWORK_ERROR')]
+    const first = setup()
+    act(() => first.result.current.submit(request))
+    await flush()
+    expect(first.result.current.attempt).toEqual(request)
+    first.unmount()
+    const second = setup()
+    expect(second.result.current.state).toMatchObject({ phase: 'submit-failed', kind: 'uncertain' })
+    expect(second.result.current.attempt).toEqual(request)
+  })
+  it('una saga en seguimiento mantiene el intento; una compensada lo libera', async () => {
+    const { result } = setup()
+    act(() => result.current.submit(request))
+    await flush()
+    expect(result.current.attempt).toEqual(request)
+    getReplies = [sagaFixture({ status: 'COMPENSATED', failedStep: 'reserve-stock' })]
+    await advance(1000)
+    expect(result.current.state.phase).toBe('compensated')
+    expect(result.current.attempt).toBeNull()
+  })
+  it('una venta confirmada libera el intento', async () => {
+    postReplies = [completedSaga]
+    const { result } = setup()
+    act(() => result.current.submit(request))
+    await flush()
+    expect(result.current.state.phase).toBe('completed')
+    expect(result.current.attempt).toBeNull()
+  })
+  it('una saga que requiere atención conserva el intento: no se edita como venta nueva', async () => {
+    postReplies = [sagaFixture({ status: 'FAILED', failedStep: 'register-sale' })]
+    const { result } = setup()
+    act(() => result.current.submit(request))
+    await flush()
+    expect(result.current.state.phase).toBe('failed')
+    expect(result.current.attempt).toEqual(request)
+  })
+})
