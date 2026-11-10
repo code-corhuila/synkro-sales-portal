@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
-import { customerFixture, failure, ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
+import { failure, ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
 import { NewSalePanel } from './NewSalePanel'
 
 const SAGAS = '/api/v1/sagas'
@@ -22,7 +22,7 @@ beforeEach(() => {
   let counter = 0
   vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`)
   apiClient.request.mockReset().mockImplementation((path) => {
-    if (path === '/api/v1/customers') return Promise.resolve(pageOf([customerFixture()]))
+    if (path === '/api/v1/customers/search') return Promise.resolve({ data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } })
     if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === `${SAGAS}/register-sale`) return reply(postReplies)
@@ -35,9 +35,8 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 type User = ReturnType<typeof userEvent.setup>
 async function fill(user: User) {
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  await user.click(await screen.findByRole('button', { name: 'Seleccionar cliente' }))
+  await user.type(screen.getByRole('combobox', { name: /cliente/i }), '1075123456')
+  await user.click(await screen.findByRole('option', { name: /Ana Pérez/ }))
   const tile = await screen.findByRole('button', { name: /^Agregar Teclado mecánico,/ })
   await user.click(tile)
   await user.click(tile)
@@ -62,7 +61,7 @@ it('éxito: envía solo cliente y líneas con clave, confirma, muestra el total 
   expect(await screen.findByText(/251,00/, { selector: '[role="status"] *' })).toBeVisible()
   expect(onRegistered).toHaveBeenCalledTimes(1)
   expect(onRegistered).toHaveBeenCalledWith(ids.sale)
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('')
+  expect(screen.getByRole('combobox', { name: /cliente/i })).toHaveValue('')
   expect(apiClient.request.mock.calls.some(([path, o]) => path === '/api/v1/sales' && o?.method === 'POST')).toBe(false)
 })
 
@@ -139,7 +138,7 @@ it('«Limpiar» vacía el formulario y descarta un resultado ya cerrado', async 
   await screen.findByRole('alert')
   await user.click(screen.getByRole('button', { name: 'Limpiar' }))
   expect(screen.queryByRole('alert')).toBeNull()
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('')
+  expect(screen.getByRole('combobox', { name: /cliente/i })).toHaveValue('')
 })
 
 it('un formulario inválido no llama a Workflow', async () => {

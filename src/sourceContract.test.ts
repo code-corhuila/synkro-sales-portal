@@ -10,7 +10,11 @@ const source = (pattern: RegExp) => production.filter((file) => pattern.test(rea
 
 it('el navegador nunca registra una venta directamente en Sales: solo Workflow', () => {
   const offenders = production.filter((file) => /method:\s*'POST'/.test(readFileSync(file, 'utf8')))
-  expect(offenders.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/api/workflowApi.ts'])
+  // Two POSTs exist: Workflow's register-sale saga, and Customers' read-only search (the text goes in the body).
+  expect(offenders.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/api/customersApi.ts', 'sales/api/workflowApi.ts'])
+  const customers = readFileSync(resolve('src/sales/api/customersApi.ts'), 'utf8')
+  expect(customers).toContain("'/api/v1/customers/search'")
+  expect(customers).not.toMatch(/\/api\/v1\/(sales|sagas)/)
   expect(readFileSync(resolve('src/sales/api/workflowApi.ts'), 'utf8')).toContain("'/api/v1/sagas/register-sale'")
   expect(source(/['"`]\/api\/v1\/sales['"`][^)]*method:\s*'(POST|PUT|PATCH|DELETE)'/)).toEqual([])
 })

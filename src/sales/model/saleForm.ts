@@ -1,10 +1,10 @@
-import type { Customer } from './customer'
+import type { CustomerChoice } from './customer'
 import type { Product } from './product'
 
 export const MAX_LINES = 100
 
 export interface LineDraft { id: string; product: Product | null; quantity: string }
-export interface SaleDraft { customer: Customer | null; lines: LineDraft[] }
+export interface SaleDraft { customer: CustomerChoice | null; lines: LineDraft[] }
 export interface RegisterSaleRequest { customerId: string; lines: { productId: string; quantity: number }[] }
 export interface LineErrors { product?: string; quantity?: string }
 export interface FormErrors {

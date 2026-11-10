@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
-import { customerFixture, ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
+import { ids, pageOf, productFixture, sagaFixture, saleFixture } from '../../test-doubles/fixtures'
 import { redirectToSales } from '../../navigation'
 import { SalesPage } from './SalesPage'
 
@@ -17,7 +17,7 @@ beforeEach(() => {
       listed += 1
       return Promise.resolve({ data: listed > 1 ? [saleFixture()] : [], meta: { page: 1, limit: 20, total: listed > 1 ? 1 : 0, totalPages: listed > 1 ? 1 : 0 } })
     }
-    if (path === '/api/v1/customers') return Promise.resolve(pageOf([customerFixture()]))
+    if (path === '/api/v1/customers/search') return Promise.resolve({ data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } })
     if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === '/api/v1/sagas/register-sale') return Promise.resolve(completed)
@@ -39,9 +39,8 @@ it('tras una venta confirmada recarga el historial desde Sales y la lista nueva 
   const user = userEvent.setup()
   render(<SalesPage />)
   await screen.findByText('No hay ventas registradas todavía.')
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  await user.click(await screen.findByRole('button', { name: 'Seleccionar cliente' }))
+  await user.type(screen.getByRole('combobox', { name: /cliente/i }), '1075123456')
+  await user.click(await screen.findByRole('option', { name: /Ana Pérez/ }))
   const tile = await screen.findByRole('button', { name: /^Agregar Teclado mecánico,/ })
   await user.click(tile)
   await user.click(tile)
