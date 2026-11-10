@@ -4,6 +4,10 @@ import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
 import { SalesPage } from './SalesPage'
 
+// These tests are about the history. The catalogue inside the registration form has its own tests and would
+// answer the history mocks with sales-shaped data.
+vi.mock('../components/ProductCatalogue', () => ({ ProductCatalogue: () => null }))
+
 const customer = '12345678-1234-4234-8234-123456789abc'
 const sale = { saleId: '12345678-1234-4234-8234-123456789abd', customerId: customer, createdBy: 'server-scoped', date: '2026-10-12T01:00:00Z', totalCents: 123456789, active: true, details: [{ detailId: 'line', productId: 'product', quantity: 1, unitPriceCents: 7, subtotalCents: 7, active: true }] }
 const page = (data = [sale], number = 1, totalPages = 3) => ({ data, meta: { page: number, limit: 20, total: totalPages ? 41 : 0, totalPages } })
@@ -130,7 +134,7 @@ it('rechaza UUID y rango inválidos con descripciones asociadas sin pedir datos'
   expect(screen.getByLabelText('ID del cliente')).toHaveAccessibleDescription(/UUID/)
   expect(screen.getByLabelText('Hasta')).toHaveAccessibleDescription(/posterior/)
   expect(screen.getByLabelText('Hasta')).toHaveFocus()
-  expect(apiClient.request).toHaveBeenCalledTimes(1)
+  expect(apiClient.request.mock.calls.filter(([path]) => path === '/api/v1/sales')).toHaveLength(1)
 })
 it('teclado: etiquetas, formulario Enter y scroll de tabla accesible', async () => {
   const user = userEvent.setup()

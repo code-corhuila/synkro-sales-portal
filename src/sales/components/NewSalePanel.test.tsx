@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '../../test-doubles/shellApiClient'
 import { session } from '../../test-doubles/shellSession'
@@ -23,6 +23,7 @@ beforeEach(() => {
   vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`)
   apiClient.request.mockReset().mockImplementation((path) => {
     if (path === '/api/v1/customers') return Promise.resolve(pageOf([customerFixture()]))
+    if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === `${SAGAS}/register-sale`) return reply(postReplies)
     if (path.startsWith(`${SAGAS}/`)) return reply(getReplies)
@@ -37,11 +38,9 @@ async function fill(user: User) {
   await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
   await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
   await user.click(await screen.findByRole('button', { name: 'Seleccionar cliente' }))
-  const line = screen.getByRole('group', { name: 'Línea 1' })
-  await user.type(within(line).getByLabelText('Buscar producto'), 'teclado')
-  await user.click(within(line).getByRole('button', { name: 'Buscar producto' }))
-  await user.selectOptions(await within(line).findByLabelText('Producto'), ids.productA)
-  await user.type(within(line).getByLabelText('Cantidad'), '2')
+  const tile = await screen.findByRole('button', { name: /^Agregar Teclado mecánico,/ })
+  await user.click(tile)
+  await user.click(tile)
 }
 const submit = (user: User) => user.click(screen.getByRole('button', { name: 'Registrar venta' }))
 
@@ -78,8 +77,8 @@ it('stock insuficiente: alerta aprobada, formulario conservado y reenvío editab
   expect(alert).toHaveTextContent('Paso fallido: reserva de stock')
   expect(alert).toHaveTextContent('No hay stock suficiente para uno o más productos de la venta.')
   expect(screen.getByText('Ana Pérez')).toBeVisible()
-  expect(screen.getByLabelText('Cantidad')).toHaveValue('2')
-  const quantity = screen.getByLabelText('Cantidad')
+  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('2')
+  const quantity = screen.getByLabelText('Cantidad de Teclado mecánico')
   await user.clear(quantity)
   await user.type(quantity, '1')
   await submit(user)
@@ -94,7 +93,7 @@ it('error de red: conserva el formulario y «Reintentar envío» reutiliza la mi
   await fill(user)
   await submit(user)
   expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo confirmar si la venta fue recibida')
-  expect(screen.getByLabelText('Cantidad')).toHaveValue('2')
+  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('2')
   await user.click(screen.getByRole('button', { name: 'Reintentar envío' }))
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts().map(([, o]) => o?.idempotencyKey)).toEqual(['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001'])
@@ -110,7 +109,7 @@ it('RUNNING: anuncia el procesamiento, bloquea el formulario y consulta hasta CO
   await submit(user)
   expect(await screen.findByText('Procesando venta…')).toBeVisible()
   expect(screen.getByRole('button', { name: /Registrando venta/ })).toBeDisabled()
-  expect(screen.getByLabelText('Cantidad')).toBeDisabled()
+  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toBeDisabled()
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts()).toHaveLength(1)
@@ -148,5 +147,6 @@ it('un formulario inválido no llama a Workflow', async () => {
   render(<NewSalePanel onRegistered={vi.fn()} />)
   await submit(user)
   expect(posts()).toHaveLength(0)
-  expect(apiClient.request).not.toHaveBeenCalled()
+  // Only the catalogue reads on mount: nothing is sent to Workflow, Sales or Customers.
+  expect(apiClient.request.mock.calls.every(([path]) => path.startsWith('/api/v1/products'))).toBe(true)
 })
