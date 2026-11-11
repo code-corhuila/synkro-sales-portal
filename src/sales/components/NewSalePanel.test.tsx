@@ -22,7 +22,10 @@ beforeEach(() => {
   let counter = 0
   vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`)
   apiClient.request.mockReset().mockImplementation((path) => {
-    if (path === '/api/v1/customers') return Promise.resolve(pageOf([customerFixture()]))
+    if (path === '/api/v1/customers/search') return Promise.resolve({ data: [{ customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', active: true, match: 'DOCUMENT_EXACT' }], meta: { limit: 5, hasMore: false } })
+    if (path === `/api/v1/customers/${ids.customer}`) return Promise.resolve(customerFixture())
+    if (path.startsWith('/api/v1/products/') && path !== '/api/v1/products/categories') return Promise.resolve(productFixture())
+    if (path === '/api/v1/products/categories') return Promise.resolve({ data: [], meta: { page: 1, limit: 100, total: 0, totalPages: 0 } })
     if (path === '/api/v1/products') return Promise.resolve(pageOf([productFixture()]))
     if (path === `${SAGAS}/register-sale`) return reply(postReplies)
     if (path.startsWith(`${SAGAS}/`)) return reply(getReplies)
@@ -34,14 +37,11 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 type User = ReturnType<typeof userEvent.setup>
 async function fill(user: User) {
-  await user.type(screen.getByLabelText('Documento del cliente'), '1075123456')
-  await user.click(screen.getByRole('button', { name: 'Buscar cliente' }))
-  await user.click(await screen.findByRole('button', { name: 'Seleccionar cliente' }))
-  const line = screen.getByRole('group', { name: 'Línea 1' })
-  await user.type(within(line).getByLabelText('Buscar producto'), 'teclado')
-  await user.click(within(line).getByRole('button', { name: 'Buscar producto' }))
-  await user.selectOptions(await within(line).findByLabelText('Producto'), ids.productA)
-  await user.type(within(line).getByLabelText('Cantidad'), '2')
+  await user.type(screen.getByRole('combobox', { name: /cliente/i }), '1075123456')
+  await user.click(await screen.findByRole('option', { name: /Ana Pérez/ }))
+  const tile = await screen.findByRole('button', { name: /^Agregar Teclado mecánico,/ })
+  await user.click(tile)
+  await user.click(tile)
 }
 const submit = (user: User) => user.click(screen.getByRole('button', { name: 'Registrar venta' }))
 
@@ -63,7 +63,7 @@ it('éxito: envía solo cliente y líneas con clave, confirma, muestra el total 
   expect(await screen.findByText(/251,00/, { selector: '[role="status"] *' })).toBeVisible()
   expect(onRegistered).toHaveBeenCalledTimes(1)
   expect(onRegistered).toHaveBeenCalledWith(ids.sale)
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('')
+  expect(screen.getByRole('combobox', { name: /cliente/i })).toHaveValue('')
   expect(apiClient.request.mock.calls.some(([path, o]) => path === '/api/v1/sales' && o?.method === 'POST')).toBe(false)
 })
 
@@ -78,8 +78,8 @@ it('stock insuficiente: alerta aprobada, formulario conservado y reenvío editab
   expect(alert).toHaveTextContent('Paso fallido: reserva de stock')
   expect(alert).toHaveTextContent('No hay stock suficiente para uno o más productos de la venta.')
   expect(screen.getByText('Ana Pérez')).toBeVisible()
-  expect(screen.getByLabelText('Cantidad')).toHaveValue('2')
-  const quantity = screen.getByLabelText('Cantidad')
+  expect(screen.getByLabelText('Cantidad de Teclado mecánico')).toHaveValue('2')
+  const quantity = screen.getByLabelText('Cantidad de Teclado mecánico')
   await user.clear(quantity)
   await user.type(quantity, '1')
   await submit(user)
@@ -94,7 +94,8 @@ it('error de red: conserva el formulario y «Reintentar envío» reutiliza la mi
   await fill(user)
   await submit(user)
   expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo confirmar si la venta fue recibida')
-  expect(screen.getByLabelText('Cantidad')).toHaveValue('2')
+  // The sent attempt stays on screen exactly as sent, read-only.
+  expect(within(screen.getByRole('region', { name: 'Intento de venta enviado' })).getByText(/Teclado mecánico × 2/)).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Reintentar envío' }))
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts().map(([, o]) => o?.idempotencyKey)).toEqual(['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001'])
@@ -110,7 +111,8 @@ it('RUNNING: anuncia el procesamiento, bloquea el formulario y consulta hasta CO
   await submit(user)
   expect(await screen.findByText('Procesando venta…')).toBeVisible()
   expect(screen.getByRole('button', { name: /Registrando venta/ })).toBeDisabled()
-  expect(screen.getByLabelText('Cantidad')).toBeDisabled()
+  expect(within(screen.getByRole('region', { name: 'Intento de venta enviado' })).getByText(/Teclado mecánico × 2/)).toBeVisible()
+  expect(screen.queryByLabelText('Cantidad de Teclado mecánico')).toBeNull()
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
   expect(await screen.findByText('Venta registrada')).toBeVisible()
   expect(posts()).toHaveLength(1)
@@ -140,7 +142,7 @@ it('«Limpiar» vacía el formulario y descarta un resultado ya cerrado', async 
   await screen.findByRole('alert')
   await user.click(screen.getByRole('button', { name: 'Limpiar' }))
   expect(screen.queryByRole('alert')).toBeNull()
-  expect(screen.getByLabelText('Documento del cliente')).toHaveValue('')
+  expect(screen.getByRole('combobox', { name: /cliente/i })).toHaveValue('')
 })
 
 it('un formulario inválido no llama a Workflow', async () => {
@@ -148,5 +150,6 @@ it('un formulario inválido no llama a Workflow', async () => {
   render(<NewSalePanel onRegistered={vi.fn()} />)
   await submit(user)
   expect(posts()).toHaveLength(0)
-  expect(apiClient.request).not.toHaveBeenCalled()
+  // Only the catalogue reads on mount: nothing is sent to Workflow, Sales or Customers.
+  expect(apiClient.request.mock.calls.every(([path]) => path.startsWith('/api/v1/products'))).toBe(true)
 })
