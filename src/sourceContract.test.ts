@@ -28,8 +28,15 @@ it('el código de producción no embebe datos de venta, clientes ni productos', 
 })
 it('solo hay un cliente HTTP y ninguna dependencia nueva de transporte o router', () => {
   const manifest = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { dependencies: Record<string, string> }
-  expect(Object.keys(manifest.dependencies).sort()).toEqual(['react', 'react-dom', 'write-excel-file'])
+  // HU-VEN-19 adds the PDF generator (pdf-lib + fontkit) and the three fonts of the approved layout,
+  // bundled locally. None of them is a transport, a router or a network client.
+  expect(Object.keys(manifest.dependencies).sort()).toEqual([
+    '@fontsource/big-shoulders-display', '@fontsource/ibm-plex-sans', '@fontsource/jetbrains-mono', '@pdf-lib/fontkit',
+    'pdf-lib', 'react', 'react-dom', 'write-excel-file',
+  ])
   expect(manifest.dependencies['write-excel-file']).toBe('4.1.1')
+  expect(manifest.dependencies['pdf-lib']).toBe('1.17.1')
+  expect(manifest.dependencies['@pdf-lib/fontkit']).toBe('1.1.1')
   expect(source(/react-router|BrowserRouter|XMLHttpRequest|axios/)).toEqual([])
 })
 

@@ -2,6 +2,7 @@ import { useEffect, useId } from 'react'
 import { redirectToSales, SALES_PATH } from '../../navigation'
 import { Button } from '../components/Button'
 import { PortalLink } from '../components/PortalLink'
+import { SaleDocumentDownloads } from '../components/SaleDocumentDownloads'
 import skeleton from '../components/Skeleton.module.css'
 import table from '../components/SalesTable.module.css'
 import { formatCents, formatDate } from '../model/formatting'
@@ -101,6 +102,7 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
         <div className={styles.fact}><dt>Total de la venta</dt><dd className={`${styles.numeric} ${styles.total}`}>{formatCents(sale.totalCents)}</dd></div>
       </dl>
     </section>
+    <SaleDocumentDownloads saleId={sale.saleId} />
     <section className={styles.card} aria-labelledby={`${title}-customer`}>
       <h2 id={`${title}-customer`} className={styles.sectionTitle}>Cliente</h2>
       <dl className={styles.facts}>

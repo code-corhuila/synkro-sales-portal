@@ -9,6 +9,11 @@ services:
       args:
         VITE_BASE_PATH: ${VITE_BASE_PATH:-/remotes/sales/}
         VITE_SHELL_ENTRY_URL: ${VITE_SHELL_ENTRY_URL:-http://localhost:5173/assets/remoteEntry.js}
+        VITE_ISSUER_LEGAL_NAME: ${VITE_ISSUER_LEGAL_NAME-synkro tech sas}
+        VITE_ISSUER_TAX_ID: ${VITE_ISSUER_TAX_ID-803.256.942-7}
+        VITE_ISSUER_ADDRESS: ${VITE_ISSUER_ADDRESS:-}
+        VITE_ISSUER_PHONE: ${VITE_ISSUER_PHONE:-}
+        VITE_ISSUER_EMAIL: ${VITE_ISSUER_EMAIL:-}
     environment:
       HOST_ORIGIN: ${HOST_ORIGIN:-http://localhost:5173}
     expose: ["80"]
