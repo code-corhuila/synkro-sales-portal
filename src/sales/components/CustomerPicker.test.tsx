@@ -149,6 +149,20 @@ it('Enter solo selecciona por documento si la coincidencia es DOCUMENT_EXACT', a
   expect(onSelect).not.toHaveBeenCalled()
 })
 
+it('Enter con varias coincidencias DOCUMENT_EXACT no elige a ninguna: la persona decide en la lista', async () => {
+  // The contract promises at most one exact document match; if the service ever answers several, the first one is not a safe default.
+  const first = suggestion({ match: 'DOCUMENT_EXACT', identityDocument: 'ABC123' })
+  const second = suggestion({ customerId: '550e8400-e29b-41d4-a716-446655440012', name: 'Ana Pérez (otra)', match: 'DOCUMENT_EXACT', identityDocument: 'abc123' })
+  const { user, onSelect } = setup(vi.fn().mockResolvedValue(result([first, second])))
+  await user.type(box(), 'abc123')
+  await screen.findAllByRole('option')
+  await user.keyboard('{Enter}')
+  expect(onSelect).not.toHaveBeenCalled()
+  expect(screen.getAllByRole('option')).toHaveLength(2)
+  await user.keyboard('{ArrowDown}{Enter}')
+  expect(onSelect).toHaveBeenCalledWith(choice(first))
+})
+
 it('Enter sin coincidencia exacta ni opción activa no selecciona a nadie', async () => {
   const { user, onSelect } = setup(vi.fn().mockResolvedValue(result([ana, luis])))
   await user.type(box(), '1075')
