@@ -87,7 +87,9 @@ export function CustomerPicker({ customer, error, onSelect, search = (query, sig
     } else if (event.key === 'Enter') {
       event.preventDefault()
       const highlighted = showList && active >= 0 ? results[active] : undefined
-      choose(highlighted ?? results.find((item) => item.match === 'DOCUMENT_EXACT'))
+      // The contract promises at most one exact document match. If several come back, none is a safe default: the person picks.
+      const exact = results.filter((item) => item.match === 'DOCUMENT_EXACT')
+      choose(highlighted ?? (exact.length === 1 ? exact[0] : undefined))
     }
   }
 
