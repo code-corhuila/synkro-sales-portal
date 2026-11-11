@@ -25,5 +25,11 @@ export function useSearch<T>(run: (term: string, signal: AbortSignal) => Promise
       (error: unknown) => { if (!current.signal.aborted) setState({ status: 'error', error }) },
     )
   }, [])
-  return { state, search }
+  // Drops the lookup in flight (if any) and forgets the last answer.
+  const reset = useCallback(() => {
+    controller.current?.abort()
+    controller.current = null
+    setState((current) => (current.status === 'idle' ? current : { status: 'idle' }))
+  }, [])
+  return { state, search, reset }
 }

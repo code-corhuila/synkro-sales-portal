@@ -35,6 +35,9 @@
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
+.number { font-family: var(--font-family-mono); font-size: var(--font-size-sm); white-space: nowrap; }
+.customer { min-width: 14rem; overflow-wrap: anywhere; }
+.document { font-family: var(--font-family-mono); font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .hint { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
 
 /* Prices and stock are numbers to scan and compare: mono, right-aligned, with

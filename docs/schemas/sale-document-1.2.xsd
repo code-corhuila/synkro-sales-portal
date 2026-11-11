@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synkro sale document, schema version 1.2 (HU-VEN-20).
+
+  COMMERCIAL schema. It describes the "Comprobante de venta" that the Sales portal hands to the
+  customer. It is NOT an electronic invoice and NOT UBL/DIAN: it has no fiscal numbering, no
+  CUFE, no QR, no resolution, no signature and no tax breakdown. <fiscalValidity> is fixed to NONE
+  so a consumer cannot mistake it for a tax document.
+
+  1.2 adds the optional <commercialNumber> (VEN-YYYY-NNNNNN), the commercial reference the Sales
+  service assigns to a sale. It is a receipt reference, not a fiscal consecutive: it can have gaps and
+  carries no tax validity. <saleId> stays the internal identity. A sale stored without a number is
+  exported without the element; it is never made up.
+
+  Provenance of the data (the origin attribute marks everything that is not the persisted sale):
+    - Everything without an origin attribute is PERSISTED in Sales: saleId, status, saleDate,
+      productId, quantity, unitPriceCents, subtotalCents, totalCents. Amounts are never repriced.
+    - origin="CURRENT_RECORD": read from Customers/Products when the file is generated. Neither
+      service keeps a snapshot of the name or contact data as it was on the sale date.
+    - origin="CONFIGURATION": explicit portal configuration (build time), not domain data.
+    - origin="UNAVAILABLE": the authorized related-record read returned404; only the persisted
+      customerId/productId and an explicit unavailable marker are exported, without invented metadata.
+
+  Formats:
+    - Instants (saleDate, generatedAt) are xs:dateTime in UTC ("Z"). They are different things: the
+      sale date is when the sale was registered; generatedAt is when this file was produced.
+    - Amounts are integers in minor units of the currency (COP has 2 minor digits: 12550 = $125.50).
+      There are no floating point amounts.
+    - Text is XML 1.0. Characters that XML 1.0 cannot carry are replaced by U+FFFD before
+      serialization, and whitespace runs are collapsed.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:synkro:sales:sale-document:1.2"
+           targetNamespace="urn:synkro:sales:sale-document:1.2"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           version="1.2">
+
+  <xs:simpleType name="Uuid">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Text">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="2000"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Integer amount in minor units, within the range a JavaScript client can represent exactly. -->
+  <xs:simpleType name="Cents">
+    <xs:restriction base="xs:nonNegativeInteger">
+      <xs:maxInclusive value="9007199254740991"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Quantity">
+    <xs:restriction base="xs:positiveInteger">
+      <xs:maxInclusive value="2147483647"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CommercialNumber">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="VEN-[1-9][0-9]{3}-[0-9]{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Origin">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CURRENT_RECORD"/>
+      <xs:enumeration value="UNAVAILABLE"/>
+      <xs:enumeration value="CONFIGURATION"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="saleDocument">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="documentType" type="DocumentType"/>
+        <xs:element name="fiscalValidity" type="FiscalValidity"/>
+        <xs:element name="saleId" type="Uuid"/>
+        <xs:element name="commercialNumber" type="CommercialNumber" minOccurs="0"/>
+        <xs:element name="status" type="Status"/>
+        <xs:element name="saleDate" type="xs:dateTime"/>
+        <xs:element name="generatedAt" type="xs:dateTime"/>
+        <xs:element name="currency" type="Currency"/>
+        <xs:element name="issuer" type="Issuer"/>
+        <xs:element name="customer" type="Customer"/>
+        <xs:element name="lines" type="Lines"/>
+        <xs:element name="totalCents" type="Cents"/>
+      </xs:sequence>
+      <xs:attribute name="schemaVersion" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="1.2"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="DocumentType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="COMMERCIAL_RECEIPT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FiscalValidity">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NONE"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- VOIDED mirrors Sale.active = false. A voided sale is never exported as ACTIVE. -->
+  <xs:simpleType name="Status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="ACTIVE"/>
+      <xs:enumeration value="VOIDED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Currency">
+    <xs:simpleContent>
+      <xs:extension base="CurrencyCode">
+        <xs:attribute name="minorUnitDigits" type="xs:positiveInteger" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:simpleType name="CurrencyCode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="COP"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Issuer">
+    <xs:sequence>
+      <xs:element name="legalName" type="Text"/>
+      <xs:element name="taxId" type="Text"/>
+      <xs:element name="address" type="Text" minOccurs="0"/>
+      <xs:element name="phone" type="Text" minOccurs="0"/>
+      <xs:element name="email" type="Text" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="origin" type="Origin" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="Customer">
+    <xs:sequence>
+      <xs:element name="customerId" type="Uuid"/>
+      <xs:choice>
+        <xs:sequence>
+      <xs:element name="name" type="Text"/>
+      <xs:element name="identityDocument" type="Text"/>
+      <xs:element name="address" type="Text" minOccurs="0"/>
+      <xs:element name="phone" type="Text" minOccurs="0"/>
+      <xs:element name="email" type="Text" minOccurs="0"/>
+        </xs:sequence>
+        <xs:element name="unavailable" type="Text"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="origin" type="Origin" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="Lines">
+    <xs:sequence>
+      <xs:element name="line" type="Line" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="count" type="xs:positiveInteger" use="required"/>
+    <xs:attribute name="unitCount" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="Line">
+    <xs:sequence>
+      <xs:element name="productId" type="Uuid"/>
+      <xs:element name="product" type="Product"/>
+      <xs:element name="quantity" type="Quantity"/>
+      <xs:element name="unitPriceCents" type="Cents"/>
+      <xs:element name="subtotalCents" type="Cents"/>
+    </xs:sequence>
+    <xs:attribute name="position" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="Product">
+    <xs:sequence>
+      <xs:choice>
+        <xs:sequence>
+      <xs:element name="name" type="Text"/>
+      <xs:element name="category" type="Text" minOccurs="0"/>
+        </xs:sequence>
+        <xs:element name="unavailable" type="Text"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="origin" type="Origin" use="required"/>
+  </xs:complexType>
+
+</xs:schema>
