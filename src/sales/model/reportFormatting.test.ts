@@ -1,4 +1,4 @@
-import { formatUtcDay, formatUtcMonth } from './reportFormatting'
+import { formatUtcDay, formatUtcMonth, visibleScopeLabel } from './reportFormatting'
 import { formatCents } from './formatting'
 
 describe('fechas de reportes (día UTC del contrato)', () => {
@@ -24,5 +24,18 @@ describe('importes de reportes', () => {
   })
   it('rechaza importes int64 que JavaScript no representa con exactitud', () => {
     expect(formatCents(Number.MAX_SAFE_INTEGER + 2)).toBe('Importe fuera del rango seguro')
+  })
+})
+
+describe('alcance visible de un rango (una página nunca pasa por el rango completo)', () => {
+  it('una sola página dice el total exacto, en singular cuando aplica', () => {
+    expect(visibleScopeLabel(1, { total: 1, totalPages: 1 }, 'día', 'días')).toBe('Mostrando 1 día del rango seleccionado.')
+    expect(visibleScopeLabel(3, { total: 3, totalPages: 1 }, 'día', 'días')).toBe('Mostrando 3 días del rango seleccionado.')
+  })
+  it('varias páginas dicen "N de M" sin asumir que la página visible es la primera', () => {
+    expect(visibleScopeLabel(20, { total: 45, totalPages: 3 }, 'día', 'días')).toBe('Mostrando 20 de 45 días del rango seleccionado.')
+  })
+  it('un rango sin resultados no reclama alcance alguno', () => {
+    expect(visibleScopeLabel(0, { total: 0, totalPages: 0 }, 'día', 'días')).toBe('')
   })
 })
