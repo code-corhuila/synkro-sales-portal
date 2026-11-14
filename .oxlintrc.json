@@ -1,5 +1,6 @@
 {
   "plugins": ["react", "typescript", "oxc"],
+  "overrides": [{ "files": ["tests/pact/**/*.ts"], "rules": { "no-restricted-globals": "off" } }],
   "rules": {
     "react/rules-of-hooks": "error",
     "no-restricted-globals": ["error",

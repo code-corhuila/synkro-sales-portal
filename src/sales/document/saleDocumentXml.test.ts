@@ -6,8 +6,8 @@ import { documentFixture, productIdOf } from '../../test-doubles/saleDocument'
 import { buildSaleDocumentXml, SALE_DOCUMENT_NAMESPACE } from './saleDocumentXml'
 import type { SaleDocument } from './types'
 
-const schema = readFileSync(resolve('docs/schemas/sale-document-1.1.xsd'), 'utf8')
-const validate = (xml: string) => validateXML({ xml: [{ fileName: 'document.xml', contents: xml }], schema: [{ fileName: 'sale-document-1.1.xsd', contents: schema }] })
+const schema = readFileSync(resolve('docs/schemas/sale-document-1.2.xsd'), 'utf8')
+const validate = (xml: string) => validateXML({ xml: [{ fileName: 'document.xml', contents: xml }], schema: [{ fileName: 'sale-document-1.2.xsd', contents: schema }] })
 const parse = (xml: string) => new DOMParser().parseFromString(xml, 'application/xml')
 const text = (root: ParentNode, selector: string) => root.querySelector(selector)?.textContent ?? null
 
@@ -37,7 +37,7 @@ it('declara el espacio de nombres y la versión del esquema', () => {
   const root = parse(buildSaleDocumentXml(documentFixture())).documentElement
   expect(root.localName).toBe('saleDocument')
   expect(root.namespaceURI).toBe(SALE_DOCUMENT_NAMESPACE)
-  expect(root.getAttribute('schemaVersion')).toBe('1.1')
+  expect(root.getAttribute('schemaVersion')).toBe('1.2')
 })
 
 it('aclara en el propio archivo que es un comprobante comercial sin validez fiscal', () => {
@@ -156,4 +156,25 @@ it('un documento de muchas líneas valida contra el esquema', async () => {
   const xml = buildSaleDocumentXml(documentFixture({ lines, unitCount: 300, totalCents: 3_998 * 150 }))
   expect((await validate(xml)).valid).toBe(true)
   expect(parse(xml).querySelectorAll('line')).toHaveLength(150)
+})
+
+it('incluye el consecutivo comercial justo después del saleId y el documento valida contra el esquema 1.2', async () => {
+  const xml = buildSaleDocumentXml(documentFixture({ commercialNumber: 'VEN-2026-000123' }))
+  expect(xml).toContain('<commercialNumber>VEN-2026-000123</commercialNumber>')
+  expect(xml.indexOf('<commercialNumber>')).toBeGreaterThan(xml.indexOf('<saleId>'))
+  expect(xml.indexOf('<commercialNumber>')).toBeLessThan(xml.indexOf('<status>'))
+  expect((await validate(xml)).valid).toBe(true)
+})
+
+it('una venta sin consecutivo no lleva el elemento ni uno inventado, y sigue siendo válida', async () => {
+  const xml = buildSaleDocumentXml(documentFixture())
+  expect(xml).not.toContain('commercialNumber')
+  expect((await validate(xml)).valid).toBe(true)
+})
+
+it('el esquema rechaza un consecutivo con formato incorrecto', async () => {
+  const good = buildSaleDocumentXml(documentFixture({ commercialNumber: 'VEN-2026-000123' }))
+  for (const bad of ['VEN-000123', 'ven-2026-000123', 'VEN-2026-123', 'FAC-2026-000123']) {
+    expect((await validate(good.replace('VEN-2026-000123', bad))).valid).toBe(false)
+  }
 })

@@ -18,5 +18,6 @@ export function assertRenderable(document: SaleDocument): void {
   if (!amount(document.totalCents) || BigInt(document.totalCents) !== sum) problems.push('total')
   if (Number.isNaN(Date.parse(document.saleDate)) || Number.isNaN(Date.parse(document.generatedAt))) problems.push('dates')
   if (!document.saleId || !document.issuer.legalName || !document.issuer.taxId || !document.customer.name) problems.push('identity')
+  if (document.commercialNumber !== undefined && !/^VEN-[1-9]\d{3}-\d{6}$/.test(document.commercialNumber)) problems.push('commercial number')
   if (problems.length) throw new Error(`Documento no representable: ${problems.join(', ')}`)
 }

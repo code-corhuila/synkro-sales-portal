@@ -14,6 +14,8 @@ interface Props {
   onRetry: () => void
   onResume: () => void
   onDismiss: () => void
+  // Offered when the service refused the customer: the sale's products are kept, the customer is chosen again.
+  onChangeCustomer?: () => void
 }
 
 // Safe Spanish copy per failed step. SagaResponse carries no reason text (ADR-007 hides
@@ -30,7 +32,7 @@ const UNRESOLVED: Record<UnresolvedReason, string> = {
   'invalid-response': 'El servicio dio una respuesta inesperada y todavía no sabemos cómo terminó la venta.',
 }
 
-export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss }: Props) {
+export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss, onChangeCustomer }: Props) {
   return <>
     {/* Always mounted so assistive technology announces the changes inside it. */}
     <div role="status" aria-live="polite" aria-atomic="true" className={styles.live}>
@@ -57,7 +59,10 @@ export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss
         <p className={styles.detail}>{STEP_REASON[state.saga.failedStep][0]}</p>
         <p className={styles.detail}>{STEP_REASON[state.saga.failedStep][1]}</p>
       </>}
-      <div className={styles.actions}><Button variant="ghost" size="small" onClick={onDismiss}>Cerrar aviso</Button></div>
+      <div className={styles.actions}>
+        {state.saga.failedStep === 'validate-customer' && onChangeCustomer && <Button variant="secondary" size="small" onClick={onChangeCustomer}>Elegir otro cliente</Button>}
+        <Button variant="ghost" size="small" onClick={onDismiss}>Cerrar aviso</Button>
+      </div>
     </div>}
     {state.phase === 'failed' && <div role="alert" className={styles.alert}>
       <p className={styles.message}>La venta requiere atención</p>

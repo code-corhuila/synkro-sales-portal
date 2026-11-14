@@ -142,7 +142,7 @@ export async function buildSaleDocumentPdf(model: SaleDocument): Promise<Uint8Ar
     const tag = wrap(faces.semibold, model.issuer.legalName.toUpperCase(), 9, textWidth)
     const titleText = 'COMPROBANTE DE VENTA'
     const titleSize = shrinkToFit(faces.display, titleText, px(50), textWidth)
-    const idText = `Venta ${model.saleId}`
+    const idText = `Venta ${model.commercialNumber ?? model.saleId}`
     const idSize = shrinkToFit(faces.mono, idText, 10, textWidth)
     const blockHeight = tag.length * 11 + 5 + titleSize * 0.95 + 6 + 13
     const content = Math.max(cardHeight, blockHeight)
@@ -166,7 +166,7 @@ export async function buildSaleDocumentPdf(model: SaleDocument): Promise<Uint8Ar
     page.drawRectangle({ x: 0, y: H - band, width: W, height: band, color: INK })
     page.drawRectangle({ x: 0, y: H - band - 3, width: W, height: 3, color: RED })
     drawText(page, 'COMPROBANTE DE VENTA', M, H - band + 11, { face: faces.display, size: 17, color: WHITE })
-    const id = `Venta ${model.saleId} · continuación`
+    const id = `Venta ${model.commercialNumber ?? model.saleId} · continuación`
     drawText(page, id, W - M, H - band + 12, { face: faces.mono, size: shrinkToFit(faces.mono, id, 8, CONTENT_WIDTH - 190), color: RED_SOFT }, 'right')
     y = H - band - 3 - px(22)
   }
@@ -361,7 +361,7 @@ export async function buildSaleDocumentPdf(model: SaleDocument): Promise<Uint8Ar
   pages.forEach((current, index) => {
     page = current
     page.drawRectangle({ x: M, y: FOOTER_HEIGHT, width: CONTENT_WIDTH, height: HAIRLINE, color: RULE })
-    const right = [`Generado por Synkro · Sistema de Gestión de Ventas`, `Venta ${model.saleId} · Página ${index + 1} de ${pages.length}`]
+    const right = [`Generado por Synkro · Sistema de Gestión de Ventas`, `Venta ${model.commercialNumber ? `${model.commercialNumber} · ` : ''}${model.saleId} · Página ${index + 1} de ${pages.length}`]
     const rightSize = Math.min(...right.map((text) => shrinkToFit(faces.sans, text, 8, CONTENT_WIDTH * 0.62)))
     const rightWidth = Math.max(...right.map((text) => widthOf(faces.sans, prepare(faces.sans, text), rightSize)))
     wrap(faces.sans, 'Gracias por su compra. Conserve este comprobante para cualquier consulta sobre su pedido.', 8, CONTENT_WIDTH - rightWidth - 18)

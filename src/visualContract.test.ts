@@ -34,7 +34,7 @@ it('el código de producción solo importa capacidades compartidas sin transport
   expect(source).not.toMatch(/\bfetch\s*\(|axios|localStorage|Bearer|Authorization|eyJ[\w-]+\.[\w-]+\.[\w-]+|:8000/)
   const storageUsers = files('src').filter((file) => /\.(ts|tsx)$/.test(file) && !/test|\.d\.ts$/.test(file))
     .filter((file) => /sessionStorage/.test(readFileSync(file, 'utf8')))
-  expect(storageUsers.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/model/intentJournal.ts'])
+  expect(storageUsers.map((file) => file.replace(/\\/g, '/').split('/src/')[1])).toEqual(['sales/model/draftJournal.ts', 'sales/model/intentJournal.ts'])
 })
 it('sigue el tema elegido en el Host (data-theme); prefers-color-scheme solo como fallback transitorio', () => {
   expect(styles).toContain(":root[data-theme='dark']")
@@ -61,4 +61,21 @@ it('sigue el tema elegido en el Host (data-theme); prefers-color-scheme solo com
     const darkSelector = selector.trim().replace(":root:not([data-theme])", ":root[data-theme='dark']")
     expect(styles).toContain(darkSelector)
   }
+})
+
+// jsdom does not apply CSS, so the unit tests cannot see that `display: flex` on a class overrides the
+// `hidden` attribute (found in a real browser: the closed suggestion list stayed on screen after Escape).
+it('una lista con atributo hidden no queda visible por el display de su clase', () => {
+  const form = readFileSync(resolve('src/sales/components/SaleForm.module.css'), 'utf8')
+  expect(form).toMatch(/\.lines\[hidden\]\s*\{[^}]*display:\s*none/)
+})
+
+// Seen in a real browser: the 22rem minimum of the generic identifier class stretched the "Número" column and
+// squeezed the customer's name and document to a few characters per line.
+it('la tabla del historial reserva ancho al cliente y no estira el número', () => {
+  const table = readFileSync(resolve('src/sales/components/SalesTable.module.css'), 'utf8')
+  const source = readFileSync(resolve('src/sales/components/SalesTable.tsx'), 'utf8')
+  expect(table).toMatch(/\.customer\s*\{[^}]*min-width:\s*14rem/)
+  expect(table).toMatch(/\.number\s*\{[^}]*white-space:\s*nowrap/)
+  expect(source).not.toContain('styles.identifier')
 })

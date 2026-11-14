@@ -66,3 +66,14 @@ it('cambios posteriores del catálogo no alteran los importes exportados', async
   const build = (catalog: typeof products) => buildSaleDocumentXml(buildSaleDocument({ sale: saleFixture(sale), customer: customerFixture(), products: catalog, categories: {}, issuer: issuerFixture(), now: NOW }))
   expect(build(repriced)).toBe(build(products))
 })
+
+it('PDF y XML llevan el mismo consecutivo comercial que la venta guardada', async () => {
+  const { sale, products } = manyLines(3)
+  const persisted = { ...sale, commercialNumber: 'VEN-2026-000777' }
+  const model = buildSaleDocument({ sale: persisted, customer: customerFixture(), products, categories: { [ids.category]: 'Periféricos' }, issuer: issuerFixture(), now: NOW })
+  const xml = buildSaleDocumentXml(model)
+  const text = squash((await readPdf(await buildSaleDocumentPdf(model))).pages.map((page) => page.text).join(' '))
+  expect(xml).toContain('<commercialNumber>VEN-2026-000777</commercialNumber>')
+  expect(text).toContain('VEN-2026-000777')
+  expect(xml).toContain(`<saleId>${persisted.saleId}</saleId>`)
+})

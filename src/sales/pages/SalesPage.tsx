@@ -12,11 +12,14 @@ import { NewSalePanel } from '../components/NewSalePanel'
 import { Button } from '../components/Button'
 import { HistoryExport } from '../components/HistoryExport'
 import { clearSalesNotice, peekSalesNotice } from '../../navigation'
+import { useCustomerLabels } from './useCustomerLabels'
 import { useSalesHistory } from './useSalesHistory'
 import styles from './SalesPage.module.css'
 
 export function SalesPage({ active = true }: { active?: boolean } = {}) {
   const history = useSalesHistory()
+  // Names and documents for the visible page, each distinct customer read once.
+  const customers = useCustomerLabels(history.state.status === 'ready' ? history.state.value.data.map((sale) => sale.customerId) : [])
   const [draft, setDraft] = useState<SalesFilters>({})
   const [errors, setErrors] = useState<FilterErrors>({})
   const title = useId()
@@ -50,7 +53,7 @@ export function SalesPage({ active = true }: { active?: boolean } = {}) {
       {history.state.status === 'loading' && <SalesTableSkeleton />}
       {history.state.status === 'error' && <SalesError error={history.state.error} onRetry={history.retry} />}
       {history.state.status === 'ready' && <>
-        {history.state.value.data.length ? <SalesTable sales={history.state.value.data} /> : <SalesEmpty filtered={filtered} onClear={clear} onReload={history.retry} />}
+        {history.state.value.data.length ? <SalesTable sales={history.state.value.data} customers={customers} /> : <SalesEmpty filtered={filtered} onClear={clear} onReload={history.retry} />}
         <SalesPagination meta={history.state.value.meta} onPage={history.goToPage} />
       </>}
     </section>

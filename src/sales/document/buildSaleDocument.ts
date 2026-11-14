@@ -84,9 +84,10 @@ export function buildSaleDocument({ sale, customer, products, categories, issuer
   const email = optionalText(customer?.email)
 
   return {
-    schemaVersion: '1.1',
+    schemaVersion: '1.2',
     documentType: 'COMMERCIAL_RECEIPT',
     saleId: sale.saleId,
+    ...(sale.commercialNumber ? { commercialNumber: sale.commercialNumber } : {}),
     status: sale.active ? 'ACTIVE' : 'VOIDED',
     saleDate: saleDate!,
     generatedAt,

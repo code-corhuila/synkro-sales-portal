@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { removeDraft } from '../model/draftJournal'
 import type { RegisterSaleRequest } from '../model/saleForm'
 import { useRegisterSale } from '../pages/useRegisterSale'
 import { SagaStatus } from './SagaStatus'
@@ -11,18 +12,21 @@ export function NewSalePanel({ onRegistered, active = true }: { onRegistered: (s
   const title = useId()
   const [formGeneration, setFormGeneration] = useState(0)
   const [latest, setLatest] = useState<RegisterSaleRequest | null>(null)
+  const [customerReset, setCustomerReset] = useState(0)
   const registration = useRegisterSale({
     active,
     // A confirmed sale empties the form so the same lines cannot be sent twice by accident.
-    onCompleted: (saleId) => { setFormGeneration((value) => value + 1); onRegistered(saleId) },
+    onCompleted: (saleId) => { removeDraft(); setFormGeneration((value) => value + 1); onRegistered(saleId) },
   })
   const { trackDraft } = registration
   return <section aria-labelledby={title} className={styles.panel}>
     <h2 id={title} className={styles.title}>Nueva venta</h2>
-    <SagaStatus state={registration.state} sale={registration.sale} canRetry={latest !== null}
-      onRetry={() => { if (latest) registration.submit(latest) }}
-      onResume={registration.resume} onDismiss={registration.dismiss} />
+    <SagaStatus state={registration.state} sale={registration.sale} canRetry={(registration.attempt ?? latest) !== null}
+      onRetry={() => { const request = registration.attempt ?? latest; if (request) registration.submit(request) }}
+      onResume={registration.resume} onDismiss={registration.dismiss}
+      onChangeCustomer={() => { registration.dismiss(); setCustomerReset((value) => value + 1) }} />
     <SaleForm key={formGeneration} pending={registration.pending} blockedReason={registration.blockedReason}
+      attempt={registration.attempt} customerResetSignal={customerReset}
       onSubmit={registration.submit} onClear={registration.clear}
       onDraftChange={(request) => { setLatest(request); trackDraft(request) }} />
   </section>

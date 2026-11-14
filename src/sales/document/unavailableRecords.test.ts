@@ -34,8 +34,8 @@ it('exports authorized historical references after related records answer404, wi
   expect(xml).not.toContain('<name>Datos actuales no disponibles</name>')
   expect(xml).not.toContain('<identityDocument>')
   expect(xml).toContain('<unavailable>Datos actuales no disponibles</unavailable>')
-  const schema = readFileSync('docs/schemas/sale-document-1.1.xsd', 'utf8')
-  expect((await validateXML({ xml:[{fileName:'document.xml',contents:xml}], schema:[{fileName:'sale-document-1.1.xsd',contents:schema}] })).valid).toBe(true)
+  const schema = readFileSync('docs/schemas/sale-document-1.2.xsd', 'utf8')
+  expect((await validateXML({ xml:[{fileName:'document.xml',contents:xml}], schema:[{fileName:'sale-document-1.2.xsd',contents:schema}] })).valid).toBe(true)
 })
 
 it.each([401,403,429,500])('does not downgrade customer HTTP%i to an unavailable reference', async status => {

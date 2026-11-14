@@ -97,7 +97,8 @@ export function SaleDetailPage({ saleId }: { saleId: string }) {
     </div>}
     <section className={styles.card} aria-label="Resumen de la venta">
       <dl className={styles.facts}>
-        <div className={styles.fact}><dt>Venta</dt><dd className={styles.mono}>{sale.saleId}</dd></div>
+        <div className={styles.fact}><dt>Número</dt><dd className={styles.mono}>{sale.commercialNumber ?? 'Sin consecutivo'}</dd></div>
+        <div className={styles.fact}><dt>Identificador interno</dt><dd className={styles.mono}>{sale.saleId}</dd></div>
         <div className={styles.fact}><dt>Fecha</dt><dd className={styles.numeric}><time dateTime={sale.date}>{formatDate(sale.date)}</time></dd></div>
         <div className={styles.fact}><dt>Total de la venta</dt><dd className={`${styles.numeric} ${styles.total}`}>{formatCents(sale.totalCents)}</dd></div>
       </dl>

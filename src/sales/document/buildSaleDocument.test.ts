@@ -33,7 +33,7 @@ it('usa el saleId completo como identificador y distingue la fecha de venta de l
   expect(document.saleId).toBe(ids.sale)
   expect(document.saleDate).toBe('2026-10-12T15:00:02Z')
   expect(document.generatedAt).toBe('2026-11-07T01:30:00Z')
-  expect(document.schemaVersion).toBe('1.1')
+  expect(document.schemaVersion).toBe('1.2')
   expect(document.documentType).toBe('COMMERCIAL_RECEIPT')
   expect(document.currency).toBe('COP')
 })
@@ -141,4 +141,21 @@ describe('falla de forma explícita, sin producir un documento parcial', () => {
     expect(error.code).toBe('PRODUCT_UNAVAILABLE')
     expect(error.details).toEqual([ids.productB])
   })
+})
+
+it('copia el consecutivo comercial de la venta guardada y conserva el saleId interno', () => {
+  const document = buildSaleDocument({ ...base, sale: { ...sale, commercialNumber: 'VEN-2026-000042' } })
+  expect(document.commercialNumber).toBe('VEN-2026-000042')
+  expect(document.saleId).toBe(ids.sale)
+})
+
+it('sin consecutivo en la venta, el documento no lo inventa', () => {
+  const document = buildSaleDocument(base)
+  expect('commercialNumber' in document).toBe(false)
+})
+
+it('un consecutivo con formato incorrecto no llega a un documento (assertRenderable lo rechaza)', async () => {
+  const { buildSaleDocumentXml } = await import('./saleDocumentXml')
+  const document = buildSaleDocument({ ...base, sale: { ...sale, commercialNumber: 'FAC-1' } })
+  expect(() => buildSaleDocumentXml(document)).toThrow(/commercial number/)
 })

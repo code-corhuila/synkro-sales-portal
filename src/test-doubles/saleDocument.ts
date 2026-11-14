@@ -45,7 +45,7 @@ export function documentFixture(overrides: Partial<SaleDocument> = {}): SaleDocu
   const sale = saleFixture()
   const line = sale.details[0]
   return {
-    schemaVersion: '1.1', documentType: 'COMMERCIAL_RECEIPT',
+    schemaVersion: '1.2', documentType: 'COMMERCIAL_RECEIPT',
     saleId: sale.saleId, status: 'ACTIVE', saleDate: sale.date, generatedAt: NOW.toISOString().replace('.000Z', 'Z'), currency: 'COP',
     issuer: issuerFixture(),
     customer: { customerId: ids.customer, name: 'Ana Pérez', identityDocument: '1075123456', address: 'Calle 1 # 2-3', phone: '3100000000', email: 'ana@correo.test' },

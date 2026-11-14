@@ -11,7 +11,8 @@
     "lint": "oxlint",
     "preview": "vite preview --port 5176 --strictPort",
     "test": "vitest run",
-    "check:compiled": "node scripts/check-compiled.mjs dist"
+    "check:compiled": "node scripts/check-compiled.mjs dist",
+    "test:contract": "npm ci --prefix tests/pact && vitest run --config tests/pact/vitest.config.ts"
   },
   "dependencies": {
     "@fontsource/big-shoulders-display": "5.3.0",

@@ -37,9 +37,11 @@ export interface SaleDocumentLine {
 }
 
 export interface SaleDocument {
-  schemaVersion: '1.1'
+  schemaVersion: '1.2'
   documentType: 'COMMERCIAL_RECEIPT'
   saleId: string
+  // Commercial reference VEN-YYYY-NNNNNN assigned by Sales. Not a fiscal number; absent when the sale has none.
+  commercialNumber?: string
   status: SaleDocumentStatus
   // RFC 3339 instants in UTC. The PDF shows them in America/Bogota.
   saleDate: string

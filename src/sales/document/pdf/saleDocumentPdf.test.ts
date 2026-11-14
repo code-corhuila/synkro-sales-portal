@@ -273,3 +273,19 @@ describe('el logo', () => {
     expect(fitInside(300, 100, 150, 150)).toEqual({ width: 150, height: 50 })
   })
 })
+
+describe('consecutivo comercial', () => {
+  it('encabeza el comprobante con el consecutivo y conserva el saleId completo como referencia interna', async () => {
+    const model = documentFixture({ commercialNumber: 'VEN-2026-000123' })
+    const { pages } = await render(model)
+    const text = squash(pages.map((page) => page.text).join(' '))
+    expect(text).toContain('Venta VEN-2026-000123')
+    expect(text).toContain(model.saleId)
+  })
+  it('una venta sin consecutivo se titula con el saleId, sin inventar un número', async () => {
+    const model = documentFixture()
+    const text = squash((await render(model)).pages.map((page) => page.text).join(' '))
+    expect(text).toContain(`Venta ${model.saleId}`)
+    expect(text).not.toContain('VEN-')
+  })
+})

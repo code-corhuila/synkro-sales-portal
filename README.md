@@ -100,3 +100,13 @@ The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 inte
 `VITE_SHELL_ENTRY_URL` is the browser-accessible host federation entry (local default `http://localhost:5173/assets/remoteEntry.js`), and runtime `HOST_ORIGIN` is the browser host origin. Change both for another host; do not use Docker DNS in these inputs. Existing React/session/client, CORS, no-store entry caching, history/filter/cancellation behavior and production credential restrictions are preserved.
 
 Verify `python -m unittest discover -s tests`, existing npm lint/build/coverage/check:compiled and standalone/prefixed images. The root owning `tests/portal_delivery.py` checks both remotes, their compiled JavaScript and CSS through the real host. Related to code-corhuila/synkro-docs#239; full-platform acceptance, owner review and documentation remain pending.
+
+### Consumer contract verification
+
+Run `npm ci && npm run test:contract` with Node 22. The isolated test tooling
+pins Pact JS in `tests/pact/package-lock.json`; application dependencies and
+production images do not include it. Tests call the real portal client through
+the Host transport boundary and generate the committed `tests/pact/pacts/`
+artifacts. CI rejects stale artifacts. Providers verify these files against
+their real disposable databases; consumer mock success alone is not provider
+acceptance. No Pact broker or published verification result is implied.

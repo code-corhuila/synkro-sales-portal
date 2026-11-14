@@ -169,3 +169,18 @@ it('no actualiza nada tras desmontar', async () => {
   await act(async () => { resolve(frozen) })
   expect(apiClient.request.mock.calls.some(([path]) => path.startsWith('/api/v1/customers'))).toBe(false)
 })
+
+it('muestra el consecutivo comercial como número de la venta y conserva el identificador interno', async () => {
+  replies.sale = () => Promise.resolve({ ...frozen, commercialNumber: 'VEN-2026-000042' })
+  render(<SaleDetailPage saleId={ids.sale} />)
+  expect(await screen.findByText('Ana Pérez')).toBeVisible()
+  expect(screen.getByText('Número').nextElementSibling).toHaveTextContent('VEN-2026-000042')
+  expect(screen.getByText('Identificador interno').nextElementSibling).toHaveTextContent(ids.sale)
+})
+
+it('una venta sin consecutivo lo indica y no inventa uno', async () => {
+  render(<SaleDetailPage saleId={ids.sale} />)
+  expect(await screen.findByText('Ana Pérez')).toBeVisible()
+  expect(screen.getByText('Número').nextElementSibling).toHaveTextContent('Sin consecutivo')
+  expect(screen.queryByText(/VEN-/)).toBeNull()
+})

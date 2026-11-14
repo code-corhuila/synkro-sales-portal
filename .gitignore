@@ -12,3 +12,6 @@ build/
 coverage/
 .evidence/
 *.tsbuildinfo
+
+/tests/pact/node_modules/
+/tests/pact/logs/
