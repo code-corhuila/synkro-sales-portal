@@ -1,112 +1,139 @@
 # synkro-sales-portal
 
-> sales bounded context: web UI (remote)
+> Sales web remote for saga-based registration, history, details, commercial documents and reporting.
 
-Part of the **SynkroTech SAS Sales Management System** — organization `code-corhuila`.
-Governance and documentation live in [`synkro-docs`](https://github.com/code-corhuila/synkro-docs).
+Part of the **SynkroTech SAS Sales Management System**. Architecture, decisions and
+contracts live in [synkro-docs](https://github.com/code-corhuila/synkro-docs).
 
-## HU-VEN-11 — historial real
+**Quick start:** from this root with Node 22, run `npm ci` and `npm run build`; mount the compiled remote through synkro-front. See [Getting started](#getting-started).
 
-Remoto React de SynkroTech para [la historia #241](https://github.com/code-corhuila/synkro-docs/issues/241). Node 22, React 19, TypeScript estricto, Vite y `@originjs/vite-plugin-federation`, siguiendo Products/develop. El lockfile fija React/React DOM 19.3.0, igual que los lockfiles actuales de Products y el host; todos declaran `^19.2.8`.
+## What it does
 
-```sh
+- Builds a cart and registers a sale only through the Workflow saga.
+- Searches active customers through the bounded Customers search API and reads the Products catalog.
+- Displays authorized history, composed detail, reports and dashboard contributions.
+- Generates PDF/XML commercial documents from persisted sale amounts and configured issuer data.
+- Uses the Host client/session and preserves registration intent under the supported session contract.
+
+## Where it fits
+
+```mermaid
+flowchart LR
+  Host["synkro-front"] -->|"loads remote"| Portal["synkro-sales-portal"]
+  Portal -->|"shared client and session"| Host
+  Host --> Gateway["synkro-api-gateway"]
+  Gateway --> Workflow["synkro-workflow"]
+  Gateway --> Sales["synkro-sales-api"]
+  Gateway --> Lookup["synkro-customers-api + synkro-products-api"]
+```
+
+The standalone page is not a second authenticated application. The Host supplies session, transport, global navigation and the browser-facing backend origin.
+
+## Tech stack
+
+| Component | Choice |
+|---|---|
+| Language / UI | TypeScript; React 19 |
+| Build | Vite; @originjs/vite-plugin-federation |
+| Tests | Vitest; compiled boundary checks; isolated Pact tooling |
+| Runtime | NGINX remote, exposed internally on platform |
+
+## Dependencies
+
+| Depends on | Purpose | Configuration |
+|---|---|---|
+| synkro-front | Shared client, identity and remote entry | VITE_SHELL_ENTRY_URL |
+| synkro-workflow, synkro-sales-api, synkro-customers-api and synkro-products-api | Published domain operations | Host client through gateway |
+
+## Getting started
+
+Use **PowerShell or Bash** from this repository root with Node 22. Prepare local build inputs from `.env.example`.
+
+```text
 npm ci
-npm run lint
 npm run build
-npm run test -- --coverage
-npm run check:compiled
 npm run preview
 ```
 
-Preview sirve `http://localhost:5176/assets/remoteEntry.js`. El host monta `salesPortal/App` en `/sales`. El HTML independiente solo informa cómo abrir el portal; no monta otro router, navegación, fuentes, sesión ni cliente HTTP. Para federation se usa build + preview, no el servidor dev de Vite.
+Build the remote before loading it in the Host. Preview is for local assets; the authenticated UI is mounted through the Host. For a container deployment, the Host serves the owning `/remotes/sales/` prefix.
 
-El remoto consume `shell/apiClient` y `shell/session` desde el entry del host (por defecto `http://localhost:5173/assets/remoteEntry.js`). Comparte React/React DOM. La configuración comprobada de Products (`target: esnext`, sin module preload/CSS split/minificación) preserva la sustitución de placeholders CSS. `check:compiled` verifica entry estable, exportación de App, placeholders resueltos y ausencia de transporte propio, URLs API absolutas o credenciales.
+For the complete platform, start from [synkro-infra-postgres](https://github.com/code-corhuila/synkro-infra-postgres).
 
-Solo solicita `GET /api/v1/sales` con `page=1`, `limit=20` y opcionalmente `from`, `to`, `customerId`. Las fechas se envían como días UTC inclusivos sin conversión local. El formulario valida calendario, orden del rango y UUID completo, asocia errores a campos y enfoca el primer inválido. Aplicar/limpiar filtros vuelve a la página 1. La paginación usa todos los campos de `meta`, rechaza páginas inválidas y corrige páginas desaparecidas tras una recarga.
+## Configuration
 
-Cada cambio cancela la petición anterior y descarta respuestas tardías. Loading mantiene encabezado y filtros con filas skeleton; error muestra copia española y traceId; empty permite limpiar o recargar; data usa solo la respuesta del servidor. Retry conserva página y filtros aplicados. `401` deja sesión/redirección al host; `403` muestra acceso denegado sin retry automático ni datos alternativos. La identidad compartida solo determina el texto introductorio. El servidor aplica el scope de ADMIN/SALESPERSON y el host bloquea INVENTORY: no hay filtros de propiedad ni filtrado de autorización en memoria.
+The committed [.env.example](.env.example) is the configuration inventory.
+Its values are examples; required inputs and defaults follow its comments and the
+owning implementation. Keep real secrets in protected local files.
 
-Fechas: `es-CO`, `America/Bogota`. Total autoritativo: COP con dos decimales mediante división/resto BigInt, sin sumar líneas ni hacer cálculos financieros flotantes. El host deserializa int64 como number; la precisión perdida fuera de `Number.MAX_SAFE_INTEGER` no puede recuperarse. En esos casos se muestra «Importe fuera del rango seguro». Admitir exactamente todo int64 requiere una futura decisión del contrato compartido; aquí no se cambia el transporte.
+| Variable | Purpose |
+|---|---|
+| `VITE_SHELL_ENTRY_URL` | Connection address, origin or build-time entry point |
+| `HOST_ORIGIN` | Connection address, origin or build-time entry point |
+| `VITE_ISSUER_LEGAL_NAME` | Vite issuer legal name |
+| `VITE_ISSUER_TAX_ID` | Vite issuer tax id |
+| `VITE_ISSUER_ADDRESS` | Vite issuer address |
+| `VITE_ISSUER_PHONE` | Vite issuer phone |
+| `VITE_ISSUER_EMAIL` | Vite issuer email |
+| `VITE_BASE_PATH` | Connection address, origin or build-time entry point |
 
-El historial muestra el UUID completo del cliente, sin N+1; el nombre se resuelve solo en el detalle (HU-VEN-12). `Ver` abre `/sales/{id}`.
+Browser build inputs and runtime NGINX inputs differ. VITE_* changes require rebuilding; HOST_ORIGIN controls the served origin where declared in deploy/compose.yml.
 
-CSS Modules consumen los tokens del host en ambos temas. No hay `:root`, colores ni fuentes globales propios. Véanse [paridad visual](docs/visual-parity.md) y [verificación y bloqueo del host](docs/verification.md).
+## Interface
 
-Vitest, Testing Library, user-event, jsdom y V8 usan aliases a dobles de shell. Los datos simulados aparecen solo en tests. Las pruebas unitarias no hacen HTTP ni requieren backend/bases de datos. El mínimo de statements es 70% global y 70% para Sales; todos los módulos de producción participan.
+| Entry / route | Use |
+|---|---|
+| ./App and ./DashboardSummary | Exposed federation modules |
+| /sales | ADMIN / SALESPERSON history and new sale |
+| /sales/{id} | Authorized detail and PDF/XML downloads |
+| /sales/reports/... | Authorized daily, monthly and top-product views |
 
-## HU-VEN-12 — registro por saga y detalle compuesto
+Customer search uses `POST /api/v1/customers/search`. Saga registration never sends SERVICE credentials or authoritative prices from the browser. PDF/XML output is a commercial document; fiscal electronic invoicing is outside this interface.
 
-Extiende `/sales` (sin ruta de registro aparte) y añade `/sales/{id}`; referencia `Refs code-corhuila/synkro-docs#246`. Contratos: `synkro-workflow.yaml` 2.1.0, `synkro-sales-api.yaml` 2.1.0, `synkro-customers-api.yaml` 2.0.0, `synkro-products-api.yaml` (docs/main).
+## Project structure
 
-**Formulario «Nueva venta».** Cliente por documento exacto (`GET /api/v1/customers?identityDocument=`, único filtro documentado; solo clientes activos son seleccionables) y productos por nombre (`GET /api/v1/products?name=&active=true&limit=10`). No se precarga ningún catálogo. De 1 a 100 líneas, cantidades enteras positivas, un producto una sola vez, errores junto al campo, «Limpiar», total estimado rotulado «referencial» (precio de catálogo × cantidad con enteros exactos; nunca autoritativo). Sin llamadas al backend si la validación cliente falla.
-
-**Registro.** Solo `POST /api/v1/sagas/register-sale` con `{ customerId, lines: [{ productId, quantity }] }` (lista blanca en `workflowApi.ts`) y `GET /api/v1/sagas/{id}`, mediante `shell/apiClient`. Nunca se envían `createdBy`, precios, subtotales, totales, `saleId` ni credenciales SERVICE, y el navegador no llama a `POST /sales`.
-
-**Idempotencia.** Una clave `crypto.randomUUID()` por intención (cliente + conjunto de líneas, independiente del orden). Un fallo de red/timeout/5xx conserva la clave: reintentar la misma solicitud la reutiliza, sin reintentos automáticos. Cambiar cliente, producto o cantidad crea una intención y clave nuevas. Si ya se conoce la saga se observa; no se envía otro POST. Un resultado `COMPENSATED` cierra la intención: repetirla es una intención nueva.
-
-**Estados de la saga** (`sagaMachine.ts`, `useRegisterSale.ts`): `RUNNING` → «Procesando venta…» con sondeo acotado (1 s, 2 s, 3 s, luego 5 s; máximo 120 s; se cancela al desmontar o sustituir). `COMPLETED` exige `saleId`, confirma «Venta registrada», lee el total autoritativo con `GET /sales/{saleId}`, recarga el historial en la página 1 y limpia el formulario. `COMPENSATED` muestra el texto aprobado (paso en español, sin enum), conserva el formulario. `FAILED` es un aviso de atención con el ID de la saga; no afirma reversión ni invita a reintentar como venta nueva. Agotar el tiempo o perder la consulta deja la saga *sin resolver* (ni éxito ni fracaso) con «Consultar estado».
-
-**Detalle.** `GET /sales/{id}` es autoritativo; luego un `GET /customers/{id}` y un `GET /products/{id}` por producto distinto, con concurrencia máxima 4. Si faltan, se muestra el identificador almacenado y un aviso con «Reintentar información»; los precios y totales son siempre los congelados de Sales. `404` → «Venta no encontrada»; `403` → `/sales` (reemplazando la entrada del historial) con aviso en español; otros errores → alerta con «Reintentar».
-
-**Navegación.** `src/navigation.ts` sigue el patrón de Products (`pushState` + `popstate`). Como `/sales` y `/sales/{id}` son una sola ruta del host (`/sales/*`), el host no vuelve a renderizar el remoto al pasar de una a otra; `App` se suscribe a `popstate` por sí misma (hallazgo de la verificación en navegador; el aviso del 403 viaja en el estado de la entrada del historial, no en la URL ni en el almacenamiento).
-
-Evidencia, brechas de contrato y dependencias reales pendientes: [verificación HU-VEN-12](docs/verification-hu-ven-12.md). La paridad visual está en [docs/visual-parity.md](docs/visual-parity.md).
-
-## HU-VEN-19 — comprobante de venta en PDF y XML
-
-El detalle `/sales/{id}` ofrece «Descargar PDF» y «Descargar XML» a ADMIN y SALESPERSON (INVENTORY no los ve; la autorización real es la de Sales API). Ambos archivos salen de un mismo modelo; importes, fecha y estado son los persistidos de la venta, y los datos del cliente y de los productos son los vigentes al generar (no existen instantáneas históricas). Es un **comprobante de alcance comercial, no una factura electrónica**: sin consecutivo, CUFE, QR, resolución ni firma. El emisor (razón social y NIT obligatorios; dirección, teléfono y correo opcionales) se configura al compilar con `VITE_ISSUER_*`: Docker/Compose y `.env.example` incluyen los valores públicos confirmados «synkro tech sas», NIT «803.256.942-7», que pueden sustituirse; sin datos obligatorios válidos la descarga se niega. Los datos actuales con404 se sustituyen por su referencia y un aviso explícito, sin perder los importes históricos. Referencia `Refs code-corhuila/synkro-docs#301`. Diseño, origen de cada campo, límites y estado de la verificación (aceptación dirigida real aprobada:11 comprobaciones y5 pares PDF/XML; revisión y promoción pendientes): [docs/sale-documents-design.md](docs/sale-documents-design.md). Esquema del XML: [docs/schemas/sale-document-1.1.xsd](docs/schemas/sale-document-1.1.xsd).
-
-## Contenedor y CI
-
-```sh
-docker build -f deploy/Dockerfile -t synkro-sales-portal:local .
-docker run --rm -e HOST_ORIGIN=http://localhost:5173 synkro-sales-portal:local nginx -t
-docker compose --env-file .env -f deploy/compose.yml up --build
+```text
+src/sales/      API calls, saga state, pages and components
+src/sales/document/ common document model, PDF and XML
+src/sales/export/   history workbook export
+deploy/         remote image, issuer build inputs and NGINX
+scripts/        compiled-output checks
+tests/pact/     isolated consumer contract tooling
+docs/           registration, document and report design
 ```
 
-Copiar `.env.example` a `.env` para configurar el entry del host (build) y su origen CORS (runtime). No se configura gateway ni credenciales. El build usa Node 22 + npm ci; Compose expone 80 solo en platform y no publica puertos; el host sirve /remotes/sales/. Nginx envsubst solo sustituye HOST_ORIGIN. Entry con `Cache-Control: no-store`; chunks con hash y caché immutable. Compose cubre únicamente este portal.
+## Testing
 
-CI conserva los archivos comunes y verifica lint, build, cobertura, bundle, imagen y Nginx. Corre para PR dirigidos a develop/qa/main y push en esas ramas, sin trigger permanente para esta feature.
-
-## Branching
-
-Three permanent branches. **None of them accepts a direct commit** — you enter through a child
-branch and leave through a Pull Request.
-
-```
-develop  <--PR--  feat/... fix/... chore/...
-qa       <--PR--  qa/...
-main     <--PR--  release/...  hotfix/...
+```text
+npm run lint
+npm test
+npm run build
+npm run check:compiled
+npm run test:contract
 ```
 
-Promotion happens **by re-application** (`git cherry-pick -x`), never by merging one permanent
-branch into another: `merge develop -> qa` and `merge qa -> main` do not exist in this model.
+Unit tests use Host doubles; they do not certify a real backend deployment. Detailed delivery notes retain their original reported test and browser-evidence limits.
 
-`main` requires **1 approval from `ariel5253`**. On `develop` and `qa` the team sets its own review
-rule.
+## Branching and contributing
 
-Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
+Use a `feat/`, `fix/` or `chore/` child branch and a PR into `develop`.
+Permanent branches are `develop`, `qa` and `main`; none accepts direct commits.
+Promote through a `qa-<description>` or release child with `git cherry-pick -x`.
+`main` requires approval from `ariel5253`. Use English Conventional Commits.
+See [Git conventions](https://github.com/code-corhuila/synkro-docs/blob/main/00-governance/git-conventions.md).
 
-## Internal root delivery
+## Further documentation
 
-HU-VEN-12 current status: [verification and integration gates](docs/verification-hu-ven-12.md).
-Intent recovery uses the [Host session lifecycle contract](docs/session-recovery-proposal.md)
-released in Front `v2.0.0` (`c43d024`). On older Hosts without it, new
-registration is disabled; history and composed detail remain available.
-This portal change does not modify Front or ratify a pending architectural decision.
+- [History behavior](docs/history-behavior.md).
+- [Registration and detail](docs/registration-and-detail.md).
+- [Commercial documents](docs/commercial-documents.md).
+- [Deployment](docs/deployment.md).
+- [Domain rules](https://github.com/code-corhuila/synkro-docs/blob/main/02-domain/entities-and-rules.md), [contracts](https://github.com/code-corhuila/synkro-docs/tree/main/07-api/contracts/openapi) and [testing strategy](https://github.com/code-corhuila/synkro-docs/blob/main/11-quality/testing-strategy.md).
 
-The owning Compose service keeps DNS `synkro-sales-portal`, exposes HTTP 80 internally, and joins external `platform`; it publishes no host port. The host proxies `/remotes/sales/` to it. `VITE_BASE_PATH` reaches Vite through Compose and Docker; npm and direct Docker builds default to `/`, while Compose defaults to `/remotes/sales/`. Select `/` explicitly for a standalone container build. Preview remains available on 5176 for local npm use.
-
-`VITE_SHELL_ENTRY_URL` is the browser-accessible host federation entry (local default `http://localhost:5173/assets/remoteEntry.js`), and runtime `HOST_ORIGIN` is the browser host origin. Change both for another host; do not use Docker DNS in these inputs. Existing React/session/client, CORS, no-store entry caching, history/filter/cancellation behavior and production credential restrictions are preserved.
-
-Verify `python -m unittest discover -s tests`, existing npm lint/build/coverage/check:compiled and standalone/prefixed images. The root owning `tests/portal_delivery.py` checks both remotes, their compiled JavaScript and CSS through the real host. Related to code-corhuila/synkro-docs#239; full-platform acceptance, owner review and documentation remain pending.
-
-### Consumer contract verification
-
-Run `npm ci && npm run test:contract` with Node 22. The isolated test tooling
-pins Pact JS in `tests/pact/package-lock.json`; application dependencies and
-production images do not include it. Tests call the real portal client through
-the Host transport boundary and generate the committed `tests/pact/pacts/`
-artifacts. CI rejects stale artifacts. Providers verify these files against
-their real disposable databases; consumer mock success alone is not provider
-acceptance. No Pact broker or published verification result is implied.
+<!-- Preserve previously published README section links. -->
+<a id="hu-ven-11--historial-real"></a>
+<a id="hu-ven-12--registro-por-saga-y-detalle-compuesto"></a>
+<a id="hu-ven-19--comprobante-de-venta-en-pdf-y-xml"></a>
+<a id="contenedor-y-ci"></a>
+<a id="branching"></a>
+<a id="internal-root-delivery"></a>
+<a id="consumer-contract-verification"></a>
