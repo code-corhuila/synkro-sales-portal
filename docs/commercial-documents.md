@@ -15,4 +15,4 @@ These are commercial documents, not fiscal electronic invoices: no CUFE, tax QR,
 
 Build-time VITE_ISSUER_* inputs configure required legal name/tax id and optional address/phone/email. Docker/Compose and .env.example carry public confirmed issuer values, which can be replaced. Invalid required issuer data disables download. Missing current related data is replaced by an explicit id/reference notice without losing historical amounts.
 
-Reference: code-corhuila/synkro-docs#301. [Document design](sale-documents-design.md) records field provenance, limits and the original directed real acceptance (11 checks and five PDF/XML pairs, with review/promotion separate). The [XML schema](schemas/sale-document-1.1.xsd) defines the document shape.
+Reference: code-corhuila/synkro-docs#301. [Document design](sale-documents-design.md) records field provenance, limits and the original directed real acceptance (11 checks and five PDF/XML pairs, with review/promotion separate). The current [XML schema 1.2](schemas/sale-document-1.2.xsd) defines the document shape; schemas [1.0](schemas/sale-document-1.0.xsd) and [1.1](schemas/sale-document-1.1.xsd) are retained as history.
