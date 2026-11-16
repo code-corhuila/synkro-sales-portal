@@ -1,13 +1,16 @@
 import { isUuid } from './identifier'
 
-// Field names and enums are the SagaResponse OpenAPI contract (synkro-workflow 2.1.0).
+// Field names and enums are the SagaResponse OpenAPI contract (synkro-workflow 2.2.0).
 export type SagaStatus = 'RUNNING' | 'COMPLETED' | 'COMPENSATED' | 'FAILED'
 export type SagaStep = 'validate-customer' | 'reserve-stock' | 'register-sale'
+// Who resumes a RUNNING saga that stopped: the Workflow later, or a responsible person.
+export type SagaRecovery = 'AUTOMATIC_RETRY' | 'OPERATOR_REQUIRED'
 
 export interface Saga {
   sagaId: string
   sagaType: 'register-sale'
   status: SagaStatus
+  recovery?: SagaRecovery
   completedSteps: SagaStep[]
   failedStep?: SagaStep
   saleId?: string
@@ -22,7 +25,9 @@ export const STEP_LABELS: Record<SagaStep, string> = {
 }
 
 const STATUSES: readonly string[] = ['RUNNING', 'COMPLETED', 'COMPENSATED', 'FAILED']
+const RECOVERIES: readonly string[] = ['AUTOMATIC_RETRY', 'OPERATOR_REQUIRED']
 const isStep = (value: unknown): value is SagaStep => typeof value === 'string' && value in STEP_LABELS
+const isAbsent = (value: unknown) => value === undefined || value === null
 
 // The portal trusts the contract, but never acts on a body that is not one: a malformed
 // answer must not become a success, a failure or a new saga.
@@ -33,6 +38,7 @@ export function parseSaga(value: unknown): Saga {
   if (typeof body.sagaId !== 'string' || !isUuid(body.sagaId)) throw invalid()
   if (body.sagaType !== 'register-sale') throw invalid()
   if (typeof body.status !== 'string' || !STATUSES.includes(body.status)) throw invalid()
+  if (!isAbsent(body.recovery) && (typeof body.recovery !== 'string' || !RECOVERIES.includes(body.recovery))) throw invalid()
   if (!Array.isArray(body.completedSteps) || !body.completedSteps.every(isStep)) throw invalid()
   if (body.failedStep !== undefined && body.failedStep !== null && !isStep(body.failedStep)) throw invalid()
   if (body.saleId !== undefined && body.saleId !== null && (typeof body.saleId !== 'string' || !isUuid(body.saleId))) throw invalid()
@@ -40,6 +46,7 @@ export function parseSaga(value: unknown): Saga {
     sagaId: body.sagaId,
     sagaType: 'register-sale',
     status: body.status as SagaStatus,
+    ...(body.recovery ? { recovery: body.recovery as SagaRecovery } : {}),
     completedSteps: body.completedSteps as SagaStep[],
     ...(body.failedStep ? { failedStep: body.failedStep as SagaStep } : {}),
     ...(body.saleId ? { saleId: body.saleId as string } : {}),
