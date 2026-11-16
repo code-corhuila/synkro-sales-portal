@@ -30,6 +30,8 @@ const UNRESOLVED: Record<UnresolvedReason, string> = {
   timeout: 'La venta sigue en proceso y todavía no sabemos cómo terminó.',
   'status-unavailable': 'No se pudo consultar el estado de la venta y todavía no sabemos cómo terminó.',
   'invalid-response': 'El servicio dio una respuesta inesperada y todavía no sabemos cómo terminó la venta.',
+  'retry-scheduled': 'Un servicio no respondió a tiempo. El stock reservado se conserva y el sistema reintentará la venta automáticamente.',
+  'operator-review': 'El sistema no pudo confirmar cómo terminó la venta; un administrador debe revisarla antes de continuar.',
 }
 
 export function SagaStatus({ state, sale, canRetry, onRetry, onResume, onDismiss, onChangeCustomer }: Props) {
