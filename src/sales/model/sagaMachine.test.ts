@@ -16,8 +16,14 @@ describe('parseSaga', () => {
     ['paso desconocido', { failedStep: 'ship' }],
     ['pasos no lista', { completedSteps: 'validate-customer' }],
     ['saleId no UUID', { saleId: 'abc' }],
+    ['recuperación desconocida', { recovery: 'LATER' }],
   ])('rechaza %s', (_name, overrides) => {
     expect(() => parseSaga(sagaFixture(overrides))).toThrow('Respuesta de saga inválida')
+  })
+  it('acepta la recuperación pública de una saga en curso', () => {
+    expect(parseSaga(sagaFixture({ recovery: 'AUTOMATIC_RETRY' })).recovery).toBe('AUTOMATIC_RETRY')
+    expect(parseSaga(sagaFixture({ recovery: 'OPERATOR_REQUIRED' })).recovery).toBe('OPERATOR_REQUIRED')
+    expect(parseSaga(sagaFixture()).recovery).toBeUndefined()
   })
   it('rechaza lo que no es un objeto', () => {
     expect(() => parseSaga(null)).toThrow('Respuesta de saga inválida')
@@ -62,6 +68,15 @@ describe('registrationReducer', () => {
     expect(isPending(unresolved)).toBe(false)
     expect(step(unresolved, { type: 'resume', sagaId: ids.saga }).phase).toBe('running')
     expect(step(unresolved, { type: 'saga', saga: completed }).phase).toBe('completed')
+  })
+  it.each([
+    ['AUTOMATIC_RETRY', 'retry-scheduled'],
+    ['OPERATOR_REQUIRED', 'operator-review'],
+  ] as const)('RUNNING con recuperación %s queda sin resolver de forma estable, sin ser terminal', (recovery, reason) => {
+    const suspended = step(initialRegistration, { type: 'submit' }, { type: 'saga', saga: saga() }, { type: 'saga', saga: saga({ recovery }) })
+    expect(suspended).toEqual({ phase: 'unresolved', sagaId: ids.saga, reason })
+    expect(isPending(suspended)).toBe(false)
+    expect(step(suspended, { type: 'resume', sagaId: ids.saga }, { type: 'saga', saga: completed }).phase).toBe('completed')
   })
   it('un error de envío no inventa saga ni resultado', () => {
     const state = step(initialRegistration, { type: 'submit' }, { type: 'submit-error', kind: 'uncertain', traceId: 't' })
