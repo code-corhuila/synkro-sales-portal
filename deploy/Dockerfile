@@ -33,7 +33,9 @@ RUN npm run build
 # Fails the image when the compiled portal has what it must not (see scripts/compiledCheck.mjs).
 RUN npm run check:compiled
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30.6-alpine@sha256:901e593c95dc85f5a729f5765516321366ef4ac401821431d408897e95287d0a
+RUN apk upgrade --no-cache \
+    && apk del nginx-module-xslt nginx-module-njs nginx-module-image-filter nginx-module-geoip nginx-module-acme
 
 # The only template variable: the origin of the host that imports this remote.
 # Limiting the substitution to it leaves nginx's own $variables untouched.
