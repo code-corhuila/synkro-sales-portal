@@ -97,6 +97,8 @@ it.each([
   ['timeout', /sigue en proceso/],
   ['status-unavailable', /No se pudo consultar el estado/],
   ['invalid-response', /respuesta inesperada/],
+  ['retry-scheduled', /reintentará la venta automáticamente/],
+  ['operator-review', /un administrador debe revisarla/],
 ] as const)('sin resolver (%s): no es éxito ni fracaso, conserva el código y permite consultar', async (reason, copy) => {
   const { user, onResume } = setup({ phase: 'unresolved', sagaId: ids.saga, reason })
   const alert = screen.getByRole('alert')

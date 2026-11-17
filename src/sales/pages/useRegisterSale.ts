@@ -132,7 +132,7 @@ export function useRegisterSale({ onCompleted, active = true }: Options = {}) {
             if (signal.aborted || !sameSession()) return
             errors = 0
             accept(saga)
-            if (saga.status !== 'RUNNING') return
+            if (saga.status !== 'RUNNING' || saga.recovery) return
           } catch (error) {
             if (signal.aborted || !sameSession()) return
             errors += 1
