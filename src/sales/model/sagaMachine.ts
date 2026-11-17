@@ -1,7 +1,12 @@
-import type { Saga } from './saga'
+import type { Saga, SagaRecovery } from './saga'
 
 export type SubmitFailureKind = 'uncertain' | 'rejected' | 'forbidden' | 'session'
-export type UnresolvedReason = 'timeout' | 'status-unavailable' | 'invalid-response'
+export type UnresolvedReason = 'timeout' | 'status-unavailable' | 'invalid-response' | 'retry-scheduled' | 'operator-review'
+
+const RECOVERY_REASON: Record<SagaRecovery, UnresolvedReason> = {
+  AUTOMATIC_RETRY: 'retry-scheduled',
+  OPERATOR_REQUIRED: 'operator-review',
+}
 
 // idle → submitting → running → one of completed | compensated | failed.
 // `unresolved` is not an outcome: the saga may still be running, so the UI says exactly that.
@@ -50,7 +55,9 @@ export function registrationReducer(state: RegistrationState, event: Registratio
       if (current && current !== saga.sagaId) return state
       switch (saga.status) {
         case 'RUNNING':
-          return { phase: 'running', sagaId: saga.sagaId, saga }
+          return saga.recovery
+            ? { phase: 'unresolved', sagaId: saga.sagaId, reason: RECOVERY_REASON[saga.recovery] }
+            : { phase: 'running', sagaId: saga.sagaId, saga }
         case 'COMPLETED':
           return saga.saleId
             ? { phase: 'completed', saga: { ...saga, saleId: saga.saleId } }

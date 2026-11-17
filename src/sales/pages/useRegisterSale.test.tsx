@@ -217,6 +217,33 @@ describe('seguimiento de la saga', () => {
     expect(onCompleted).not.toHaveBeenCalled()
     expect(result.current.blockedReason).toMatch(/seguimiento/)
   })
+  it('una saga con reintento automático deja de consultarse y queda sin resolver hasta que se consulte de nuevo', async () => {
+    getReplies = [sagaFixture({ completedSteps: ['validate-customer', 'reserve-stock'], recovery: 'AUTOMATIC_RETRY' })]
+    const { result, onCompleted } = setup()
+    act(() => result.current.submit(request))
+    await flush()
+    await advance(1000)
+    expect(result.current.state).toEqual({ phase: 'unresolved', sagaId: ids.saga, reason: 'retry-scheduled' })
+    const seen = gets().length
+    await advance(600000)
+    expect(gets()).toHaveLength(seen)
+    expect(result.current.state).toMatchObject({ phase: 'unresolved', reason: 'retry-scheduled' })
+    getReplies = [completedSaga]
+    act(() => result.current.resume())
+    await advance(1000)
+    expect(result.current.state.phase).toBe('completed')
+    expect(onCompleted).toHaveBeenCalledWith(ids.sale)
+    expect(posts()).toHaveLength(1)
+  })
+  it('una saga que requiere revisión de un responsable no se presenta como «Procesando»', async () => {
+    postReplies = [sagaFixture({ recovery: 'OPERATOR_REQUIRED' })]
+    const { result } = setup()
+    act(() => result.current.submit(request))
+    await flush()
+    await advance(10000)
+    expect(result.current.state).toEqual({ phase: 'unresolved', sagaId: ids.saga, reason: 'operator-review' })
+    expect(gets()).toHaveLength(0)
+  })
   it('resume vuelve a observar la misma saga sin otro POST y llega a un resultado', async () => {
     const { result } = setup()
     act(() => result.current.submit(request))
